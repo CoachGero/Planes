@@ -7,6 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@1,400;1,500&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --bg:#000000;
@@ -161,23 +164,126 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(74px + env(safe-area-inset-bottom,0px));background:#fff;color:#000;padding:10px 16px;border-radius:999px;font-weight:600;font-size:13px;z-index:50;max-width:90%;text-align:center;}
 .toast[hidden]{display:none;}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important;}}
+
+/* login */
+.auth-screen{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;}
+.auth-screen[hidden]{display:none;}
+.auth-card{width:100%;max-width:360px;}
+.auth-card h1{margin:0 0 4px;}
+.auth-card .fld{margin-bottom:14px;}
+.auth-error{color:var(--red-text);font-size:13px;min-height:16px;margin-top:6px;}
+.app-shell[hidden]{display:none;}
+.who-bar{display:flex;align-items:center;gap:10px;}
+.who-bar .tag{font-size:12px;color:var(--muted);}
 </style>
 </head>
 <body>
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="brand" style="margin-bottom:22px"><strong>PF. Gerónimo Malara</strong><span>Ragnarok Gym</span></div>
+    <h1>Ingresá a tu cuenta</h1>
+    <p class="sub" style="margin-bottom:18px">Usá el email y la contraseña que te dio tu entrenador.</p>
+    <label class="fld">Email<input type="email" id="authEmail" autocomplete="username"></label>
+    <label class="fld">Contraseña<input type="password" id="authPass" autocomplete="current-password"></label>
+    <button type="button" class="btn wide" id="authSubmit" style="margin-top:4px">Ingresar</button>
+    <p class="auth-error" id="authError"></p>
+  </div>
+</div>
+<div id="appShell" class="app-shell" hidden>
 <header class="topbar">
   <div class="brand"><strong>PF. Gerónimo Malara</strong><span>Ragnarok Gym</span></div>
-  <div class="role" role="group" aria-label="Cambiar de vista">
-    <button type="button" data-role="alumno" aria-pressed="true">Alumno</button>
-    <button type="button" data-role="trainer" aria-pressed="false">Entrenador</button>
-  </div>
+  <div class="who-bar" id="whoBar"></div>
 </header>
 <main id="main"></main>
 <nav class="tabs" aria-label="Secciones"><div class="tabs-in" id="tabs"></div></nav>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</div>
 
 <script>
 (function(){
 'use strict';
+
+/* ---------- Firebase ---------- */
+var firebaseConfig={
+  apiKey:"AIzaSyD6hYhyvUnaVTLW7HjXy6UpwzDibBdyUEU",
+  authDomain:"coachgeroapp.firebaseapp.com",
+  projectId:"coachgeroapp",
+  storageBucket:"coachgeroapp.firebasestorage.app",
+  messagingSenderId:"1015076100289",
+  appId:"1:1015076100289:web:7eaff623124c797be7dc40"
+};
+/* Reemplazá esto por tu UID de entrenador (Firebase Console > Authentication > Users) */
+var TRAINER_UID="REEMPLAZAR_CON_TU_UID";
+
+firebase.initializeApp(firebaseConfig);
+var auth=firebase.auth();
+var db=firebase.firestore();
+/* app secundaria: crear alumnos sin cerrar tu sesión de profe */
+var secondaryApp=firebase.initializeApp(firebaseConfig,"Secondary");
+var secondaryAuth=secondaryApp.auth();
+
+var CURRENT_UID=null,CURRENT_ROLE=null;
+
+function genTempPass(){
+  var chars='ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789',s='';
+  for(var i=0;i<8;i++)s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+function loadClientDoc(uidVal){
+  return db.collection('clients').doc(uidVal).get().then(function(snap){
+    if(!snap.exists)return null;
+    var d=snap.data();d.id=uidVal;return d;
+  });
+}
+function loadAllClients(){
+  return db.collection('clients').get().then(function(qs){
+    var arr=[];qs.forEach(function(doc){var d=doc.data();d.id=doc.id;arr.push(d);});
+    arr.sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
+    return arr;
+  });
+}
+function showAuth(msg){
+  document.getElementById('appShell').hidden=true;
+  document.getElementById('authScreen').hidden=false;
+  document.getElementById('authError').textContent=msg||'';
+}
+function hideAuth(){
+  document.getElementById('authScreen').hidden=true;
+  document.getElementById('appShell').hidden=false;
+}
+function doLogin(){
+  var email=document.getElementById('authEmail').value.trim();
+  var pass=document.getElementById('authPass').value;
+  var err=document.getElementById('authError');
+  err.textContent='';
+  if(!email||!pass){err.textContent='Completá email y contraseña.';return;}
+  auth.signInWithEmailAndPassword(email,pass).catch(function(){
+    err.textContent='No pudimos ingresar. Revisá el email y la contraseña.';
+  });
+}
+document.getElementById('authSubmit').addEventListener('click',doLogin);
+document.getElementById('authPass').addEventListener('keydown',function(ev){if(ev.key==='Enter')doLogin();});
+
+auth.onAuthStateChanged(function(user){
+  if(!user){CURRENT_UID=null;CURRENT_ROLE=null;S.clients=[];showAuth();return;}
+  CURRENT_UID=user.uid;
+  if(user.uid===TRAINER_UID){
+    CURRENT_ROLE='trainer';
+    loadAllClients().then(function(arr){
+      S.clients=arr;
+      UI.role='trainer';UI.tab='alumnos';UI.sel=arr.length?arr[0].id:null;
+      if(UI.sel)UI.day=defaultDay(cl(UI.sel));
+      hideAuth();render(true);
+    });
+  }else{
+    loadClientDoc(user.uid).then(function(d){
+      if(!d){auth.signOut();showAuth('Tu usuario todavía no tiene un plan cargado. Avisale a tu entrenador.');return;}
+      S.clients=[d];CURRENT_ROLE='alumno';
+      UI.role='alumno';UI.tab='plan';UI.day=defaultDay(d);
+      hideAuth();render(true);
+    });
+  }
+});
 
 /* ---------- utilidades ---------- */
 var $=function(s){return document.querySelector(s);};
@@ -304,20 +410,22 @@ function seed(){
 }
 
 /* ---------- estado y guardado ---------- */
-function loadState(){
-  try{
-    var raw=localStorage.getItem(LS);
-    if(raw){var s=JSON.parse(raw);if(s&&s.v===1&&Array.isArray(s.clients)&&s.clients.length){uid=s.uid||uid;return {clients:s.clients};}}
-  }catch(e){}
-  return null;
-}
-var S=loadState()||{clients:seed()};
+var S={clients:[]};
 var saveT;
-function save(){clearTimeout(saveT);saveT=setTimeout(function(){try{localStorage.setItem(LS,JSON.stringify({v:1,uid:uid,clients:S.clients}));}catch(e){}},250);}
+function save(){
+  clearTimeout(saveT);
+  saveT=setTimeout(function(){
+    var targetId=UI.role==='alumno'?CURRENT_UID:UI.sel;
+    var c=cl(targetId);
+    if(!c||!targetId)return;
+    var data={};for(var k in c){if(k!=='id')data[k]=c[k];}
+    db.collection('clients').doc(targetId).set(data).catch(function(e){toast('No se pudo guardar: '+e.message);});
+  },400);
+}
 
-var UI={role:'alumno',tab:'plan',sel:'mar',week:CUR_WEEK,day:0,exId:null,metric:'kg'};
+var UI={role:null,tab:'plan',sel:null,week:CUR_WEEK,day:0,exId:null,metric:'kg'};
 var cl=function(id){return S.clients.filter(function(c){return c.id===id;})[0]||S.clients[0];};
-var cur=function(){return UI.role==='alumno'?cl('mar'):cl(UI.sel);};
+var cur=function(){return UI.role==='alumno'?cl(CURRENT_UID):cl(UI.sel);};
 
 function filled(c,w,d,e){var a=c.loads[key(w,d,e.id)]||[];var n=0;for(var r=0;r<e.rounds;r++){if(num(a[r]))n++;}return n;}
 function defaultDay(c){
@@ -400,8 +508,8 @@ function scrClients(){
     var p=weekPct(x,CUR_WEEK);
     return '<li><button type="button" class="row-btn'+(x.id===UI.sel?' on':'')+'" data-act="pick" data-id="'+x.id+'"><span class="rb-main"><strong>'+esc(x.name)+'</strong><em>'+esc(x.goal)+'</em></span><span class="rb-side"><span class="bar" aria-hidden="true"><i style="width:'+p+'%"></i></span>'+p+'% de la semana '+CUR_WEEK+'</span></button></li>';
   }).join('')+'</ul>'+
-  '<button type="button" class="btn ghost wide" data-act="add-client">Agregar alumno</button>'+
-  '<button type="button" class="link" data-act="reset-ask">Restablecer datos de ejemplo</button>';
+  (S.clients.length?'':'<p class="empty">Todavía no agregaste alumnos.</p>')+
+  '<button type="button" class="btn ghost wide" data-act="add-client">Agregar alumno</button>';
 }
 
 function exBlock(c,w,d,e){
@@ -547,7 +655,9 @@ function render(scrollTop){
   tb.style.gridTemplateColumns='repeat('+tabs.length+',1fr)';
   tb.innerHTML=tabs.map(function(t){return '<button type="button" class="tab" data-act="tab" data-v="'+t[0]+'"'+(t[0]===UI.tab?' aria-current="page"':'')+'>'+icon(ICON_FOR[t[0]])+'<span>'+t[1]+'</span></button>';}).join('');
   var fn={plan:UI.role==='alumno'?scrTrain:scrEdit,prog:scrProg,nutri:scrNutri,progs:scrProgs,alumnos:scrClients}[UI.tab];
-  $('#main').innerHTML='<p class="demo">Prototipo con datos de ejemplo. Podés cambiar entre Alumno y Entrenador arriba.</p>'+fn(c);
+  $('#main').innerHTML=(UI.tab==='alumnos')?scrClients():(c?fn(c):'<p class="empty">Agregá un alumno para empezar.</p>');
+  var wb=document.getElementById('whoBar');
+  if(wb)wb.innerHTML='<span class="who-bar tag">'+(UI.role==='trainer'?'Panel del entrenador':esc(c?c.first:''))+'</span><button type="button" class="btn ghost small" data-act="logout">Salir</button>';
   if(scrollTop)window.scrollTo(0,0);
 }
 
@@ -565,8 +675,6 @@ function toast(m){var t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(
 
 /* ---------- eventos ---------- */
 document.addEventListener('click',function(ev){
-  var rb=ev.target.closest('[data-role]');
-  if(rb){UI.role=rb.getAttribute('data-role');UI.tab=UI.role==='alumno'?'plan':'alumnos';UI.day=defaultDay(cur());UI.exId=null;render(true);return;}
   if(ev.target.id==='sheet'){closeSheet();return;}
   var t=ev.target.closest('[data-act]');if(!t)return;
   var a=t.getAttribute('data-act'),c=cur();
@@ -601,12 +709,31 @@ document.addEventListener('click',function(ev){
     save();closeSheet();render();toast('Programa habilitado');
   }
   else if(a==='month'){toast('En la versión real se abre el plan del mes '+t.getAttribute('data-v'));}
-  else if(a==='add-client'){toast('En la versión real, acá sumás un alumno nuevo');}
-  else if(a==='reset-ask'){
-    openSheet('<h2>Restablecer datos de ejemplo</h2><p>Se borran los cambios que hiciste en este prototipo y vuelven los datos originales.</p><button type="button" class="btn" data-act="reset">Restablecer</button><button type="button" class="btn ghost" data-act="close">Cancelar</button>');
+  else if(a==='logout'){auth.signOut();}
+  else if(a==='add-client'){
+    openSheet('<h2>Agregar alumno</h2><label class="fld">Nombre y apellido<input type="text" id="nc-name"></label>'+
+      '<label class="fld">Email de acceso<input type="email" id="nc-email"></label>'+
+      '<label class="fld">Contraseña temporal<input type="text" id="nc-pass" value="'+genTempPass()+'"></label>'+
+      '<p class="legend">Compartile el email y la contraseña por WhatsApp para que ingrese.</p>'+
+      '<button type="button" class="btn wide" data-act="create-client">Crear usuario</button>'+
+      '<button type="button" class="btn ghost wide" data-act="close">Cancelar</button>');
   }
-  else if(a==='reset'){
-    uid=100;S.clients=seed();UI.day=defaultDay(cur());UI.exId=null;save();closeSheet();render(true);toast('Datos restablecidos');
+  else if(a==='create-client'){
+    var name=document.getElementById('nc-name').value.trim();
+    var email=document.getElementById('nc-email').value.trim();
+    var pass=document.getElementById('nc-pass').value.trim();
+    if(!name||!email||!pass){toast('Completá nombre, email y contraseña');return;}
+    t.disabled=true;t.textContent='Creando...';
+    secondaryAuth.createUserWithEmailAndPassword(email,pass).then(function(cred){
+      var newUid=cred.user.uid;
+      var blank={name:name,first:name.split(' ')[0],goal:'',scale:1,height:170,plan:[[],[],[],[],[]],loads:{},notes:{},nutri:[],unlocked:[]};
+      return db.collection('clients').doc(newUid).set(blank).then(function(){return secondaryAuth.signOut();});
+    }).then(function(){return loadAllClients();}).then(function(arr){
+      S.clients=arr;closeSheet();render(true);toast('Alumno creado. Compartile el email y la contraseña.');
+    }).catch(function(err){
+      var msg=err&&err.code==='auth/email-already-in-use'?'Ese email ya está en uso':'No se pudo crear: '+(err&&err.message?err.message:'');
+      toast(msg);t.disabled=false;t.textContent='Crear usuario';
+    });
   }
   else if(a==='save-nutri'){
     var g=function(id){return document.getElementById(id).value;};
@@ -650,8 +777,6 @@ document.addEventListener('change',function(ev){
 
 document.addEventListener('keydown',function(ev){if(ev.key==='Escape')closeSheet();});
 
-UI.day=defaultDay(cur());
-render();
 })();
 </script>
 </body>
