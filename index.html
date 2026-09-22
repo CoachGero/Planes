@@ -232,12 +232,12 @@ function genTempPass(){
 function loadClientDoc(uidVal){
   return db.collection('clients').doc(uidVal).get().then(function(snap){
     if(!snap.exists)return null;
-    var d=snap.data();d.id=uidVal;return d;
+    var raw=snap.data();var d=raw.state?JSON.parse(raw.state):{};d.id=uidVal;return d;
   });
 }
 function loadAllClients(){
   return db.collection('clients').get().then(function(qs){
-    var arr=[];qs.forEach(function(doc){var d=doc.data();d.id=doc.id;arr.push(d);});
+    var arr=[];qs.forEach(function(doc){var raw=doc.data();var d=raw.state?JSON.parse(raw.state):{};d.id=doc.id;arr.push(d);});
     arr.sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
     return arr;
   });
@@ -419,7 +419,7 @@ function save(){
     var c=cl(targetId);
     if(!c||!targetId)return;
     var data={};for(var k in c){if(k!=='id')data[k]=c[k];}
-    db.collection('clients').doc(targetId).set(data).catch(function(e){toast('No se pudo guardar: '+e.message);});
+    db.collection('clients').doc(targetId).set({state:JSON.stringify(data)}).catch(function(e){toast('No se pudo guardar: '+e.message);});
   },400);
 }
 
@@ -727,7 +727,7 @@ document.addEventListener('click',function(ev){
     secondaryAuth.createUserWithEmailAndPassword(email,pass).then(function(cred){
       var newUid=cred.user.uid;
       var blank={name:name,first:name.split(' ')[0],goal:'',scale:1,height:170,plan:[[],[],[],[],[]],loads:{},notes:{},nutri:[],unlocked:[]};
-      return db.collection('clients').doc(newUid).set(blank).then(function(){return secondaryAuth.signOut();});
+      return db.collection('clients').doc(newUid).set({state:JSON.stringify(blank)}).then(function(){return secondaryAuth.signOut();});
     }).then(function(){return loadAllClients();}).then(function(arr){
       S.clients=arr;closeSheet();render(true);toast('Alumno creado. Compartile el email y la contraseña.');
     }).catch(function(err){
