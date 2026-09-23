@@ -428,6 +428,12 @@ var cl=function(id){return S.clients.filter(function(c){return c.id===id;})[0]||
 var cur=function(){return UI.role==='alumno'?cl(CURRENT_UID):cl(UI.sel);};
 
 function filled(c,w,d,e){var a=c.loads[key(w,d,e.id)]||[];var n=0;for(var r=0;r<e.rounds;r++){if(num(a[r]))n++;}return n;}
+function repsArr(e,w){
+  if(!e.reps[w-1]||!Array.isArray(e.reps[w-1])){var v=e.reps[w-1];e.reps[w-1]=[];if(typeof v==='number'){for(var i=0;i<e.rounds;i++)e.reps[w-1].push(v);}}
+  var a=e.reps[w-1];
+  while(a.length<e.rounds)a.push(a.length?a[a.length-1]:10);
+  return a;
+}
 function defaultDay(c){
   for(var d=0;d<DAYS.length;d++){
     var list=c.plan[d]||[];
@@ -514,10 +520,11 @@ function scrClients(){
 
 function exBlock(c,w,d,e){
   var k=key(w,d,e.id),arr=c.loads[k]||[],prev=w>1?(c.loads[key(w-1,d,e.id)]||[]):[];
+  var repsA=repsArr(e,w);
   var cells='';
   for(var r=0;r<e.rounds;r++){
     var v=arr[r]||'';
-    cells+='<div class="rd'+(num(v)?' done':'')+'"><span class="n">R'+(r+1)+'</span><span class="reps">'+esc(e.reps[w-1])+'</span>'+
+    cells+='<div class="rd'+(num(v)?' done':'')+'"><span class="n">R'+(r+1)+'</span><span class="reps">'+esc(repsA[r])+'</span>'+
       '<input type="text" inputmode="decimal" autocomplete="off" aria-label="Kilos de la ronda '+(r+1)+'" data-load data-k="'+k+'" data-r="'+r+'" value="'+esc(v)+'" placeholder="'+esc(prev[r]||'kg')+'">'+
       '<span class="rir">RIR '+esc(e.rir[w-1])+'</span></div>';
   }
@@ -548,16 +555,22 @@ function scrEdit(c){
   var chipsD=DAYS.map(function(n,i){return '<button type="button" class="chip" data-act="day" data-v="'+i+'" aria-pressed="'+(i===d)+'">'+n+'</button>';}).join('');
   var blocks=list.map(function(e){
     var opts=[4,5,6].map(function(n){return '<option value="'+n+'"'+(n===e.rounds?' selected':'')+'>'+n+'</option>';}).join('');
+    var repsA=repsArr(e,w);
+    var repInputs='';
+    for(var r=0;r<e.rounds;r++){
+      repInputs+='<label class="fld"><span>R'+(r+1)+'</span><input type="number" inputmode="numeric" min="1" data-repfield data-ex="'+e.id+'" data-r="'+r+'" value="'+esc(repsA[r])+'"></label>';
+    }
     return '<section class="ex edit">'+
       '<label class="fld">Ejercicio<input type="text" data-edit data-ex="'+e.id+'" data-field="name" value="'+esc(e.name)+'"></label>'+
       '<div class="r3"><label class="fld">Rondas<select data-sel="rounds" data-ex="'+e.id+'">'+opts+'</select></label>'+
-      '<label class="fld">Reps<input type="number" inputmode="numeric" min="1" data-edit data-ex="'+e.id+'" data-field="reps" value="'+esc(e.reps[w-1])+'"></label>'+
       '<label class="fld">RIR<input type="number" inputmode="numeric" min="0" data-edit data-ex="'+e.id+'" data-field="rir" value="'+esc(e.rir[w-1])+'"></label></div>'+
+      '<p class="legend" style="margin:8px 0 4px">Repeticiones por ronda</p>'+
+      '<div class="rounds" style="grid-template-columns:repeat('+e.rounds+',minmax(0,1fr))">'+repInputs+'</div>'+
       '<label class="fld">Indicación técnica<input type="text" data-edit data-ex="'+e.id+'" data-field="cue" value="'+esc(e.cue)+'"></label>'+
       '<label class="fld">Video explicativo (link)<input type="url" inputmode="url" placeholder="https://" data-edit data-ex="'+e.id+'" data-field="video" value="'+esc(e.video)+'"></label>'+
       '<button type="button" class="link" data-act="del-ex" data-ex="'+e.id+'">Quitar ejercicio</button></section>';
   }).join('');
-  return '<h1>Plan de '+esc(c.first)+'</h1><p class="sub">Las repeticiones y el RIR se definen por semana.</p>'+clientBar(c)+
+  return '<h1>Plan de '+esc(c.first)+'</h1><p class="sub">Las repeticiones se definen por ronda; el RIR se define por semana.</p>'+clientBar(c)+
     '<div class="chips" style="margin-top:12px" role="group" aria-label="Semana">'+chipsW+'</div>'+
     '<div class="chips" role="group" aria-label="Día">'+chipsD+'</div>'+
     '<h2 class="dayh">'+esc(DAY_TITLES[d])+'</h2>'+
@@ -759,10 +772,16 @@ document.addEventListener('input',function(ev){
     save();
   }else if(t.hasAttribute('data-note')){
     c.notes[t.getAttribute('data-k')]=t.value;save();
+  }else if(t.hasAttribute('data-repfield')){
+    var f2=findEx(c,t.getAttribute('data-ex'));if(!f2)return;
+    var r2=+t.getAttribute('data-r'),n2=parseInt(t.value,10);
+    var a2=repsArr(f2.ex,UI.week);
+    if(isFinite(n2)&&n2>=0)a2[r2]=n2;
+    save();
   }else if(t.hasAttribute('data-edit')){
     var f=findEx(c,t.getAttribute('data-ex'));if(!f)return;
     var field=t.getAttribute('data-field');
-    if(field==='reps'||field==='rir'){var n=parseInt(t.value,10);if(isFinite(n)&&n>=0)f.ex[field][UI.week-1]=n;}
+    if(field==='rir'){var n=parseInt(t.value,10);if(isFinite(n)&&n>=0)f.ex[field][UI.week-1]=n;}
     else f.ex[field]=t.value;
     save();
   }
