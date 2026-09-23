@@ -458,7 +458,13 @@ function weekPct(c,w){
   return t?Math.round(f/t*100):0;
 }
 function allEx(c){var out=[];c.plan.forEach(function(day,d){day.forEach(function(e){out.push({ex:e,d:d});});});return out;}
-function findEx(c,id){var l=allEx(c);for(var i=0;i<l.length;i++){if(l[i].ex.id===id)return l[i];}return null;}
+function findEx(c,id,day){
+  if(day!=null){
+    var list=c.plan[day]||[];
+    for(var i=0;i<list.length;i++){if(list[i].id===id)return {ex:list[i],d:day};}
+  }
+  var l=allEx(c);for(var i=0;i<l.length;i++){if(l[i].ex.id===id)return l[i];}return null;
+}
 function extremes(c,item){
   var mx=null,mn=null;
   for(var w=1;w<=4;w++){
@@ -708,7 +714,7 @@ document.addEventListener('click',function(ev){
   else if(a==='pick'){UI.sel=t.getAttribute('data-id');UI.day=defaultDay(cl(UI.sel));UI.exId=null;UI.tab='plan';render(true);}
   else if(a==='close'){closeSheet();}
   else if(a==='video'){
-    var f=findEx(c,t.getAttribute('data-ex'));if(!f)return;
+    var f=findEx(c,t.getAttribute('data-ex'),UI.day);if(!f)return;
     var u=safeUrl(f.ex.video);
     openSheet('<h2>'+esc(f.ex.name)+'</h2><div class="vid">'+(u?'Video cargado por tu entrenador':'Acá se ve el video explicativo del ejercicio')+'</div>'+
       (f.ex.cue?'<p>'+esc(f.ex.cue)+'</p>':'')+
@@ -784,13 +790,13 @@ document.addEventListener('input',function(ev){
   }else if(t.hasAttribute('data-note')){
     c.notes[t.getAttribute('data-k')]=t.value;save();
   }else if(t.hasAttribute('data-repfield')){
-    var f2=findEx(c,t.getAttribute('data-ex'));if(!f2)return;
+    var f2=findEx(c,t.getAttribute('data-ex'),UI.day);if(!f2)return;
     var r2=+t.getAttribute('data-r'),n2=parseInt(t.value,10);
     var a2=repsArr(f2.ex,UI.week);
     if(isFinite(n2)&&n2>=0)a2[r2]=n2;
     save();
   }else if(t.hasAttribute('data-edit')){
-    var f=findEx(c,t.getAttribute('data-ex'));if(!f)return;
+    var f=findEx(c,t.getAttribute('data-ex'),UI.day);if(!f)return;
     var field=t.getAttribute('data-field');
     if(field==='rir'){var n=parseInt(t.value,10);if(isFinite(n)&&n>=0)f.ex[field][UI.week-1]=n;}
     else f.ex[field]=t.value;
@@ -802,7 +808,7 @@ document.addEventListener('change',function(ev){
   var t=ev.target,s=t.getAttribute&&t.getAttribute('data-sel');if(!s)return;
   if(s==='ex'){UI.exId=t.value;render();}
   else if(s==='metric'){UI.metric=t.value;render();}
-  else if(s==='rounds'){var f=findEx(cur(),t.getAttribute('data-ex'));if(f){f.ex.rounds=+t.value;save();render();}}
+  else if(s==='rounds'){var cc=cur();var f=findEx(cc,t.getAttribute('data-ex'),UI.day);if(f){f.ex.rounds=+t.value;save();render();}}
 });
 
 document.addEventListener('keydown',function(ev){if(ev.key==='Escape')closeSheet();});
