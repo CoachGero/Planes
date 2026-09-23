@@ -264,13 +264,24 @@ function doLogin(){
 document.getElementById('authSubmit').addEventListener('click',doLogin);
 document.getElementById('authPass').addEventListener('keydown',function(ev){if(ev.key==='Enter')doLogin();});
 
+function bumpUidFrom(clientsArr){
+  clientsArr.forEach(function(c){
+    (c.plan||[]).forEach(function(list){
+      (list||[]).forEach(function(e){
+        var m=/^e(\d+)$/.exec(e.id||'');
+        if(m){var n=parseInt(m[1],10)+1;if(n>uid)uid=n;}
+      });
+    });
+  });
+}
+
 auth.onAuthStateChanged(function(user){
   if(!user){CURRENT_UID=null;CURRENT_ROLE=null;S.clients=[];showAuth();return;}
   CURRENT_UID=user.uid;
   if(user.uid===TRAINER_UID){
     CURRENT_ROLE='trainer';
     loadAllClients().then(function(arr){
-      S.clients=arr;
+      S.clients=arr;bumpUidFrom(arr);
       UI.role='trainer';UI.tab='alumnos';UI.sel=arr.length?arr[0].id:null;
       if(UI.sel)UI.day=defaultDay(cl(UI.sel));
       hideAuth();render(true);
@@ -278,7 +289,7 @@ auth.onAuthStateChanged(function(user){
   }else{
     loadClientDoc(user.uid).then(function(d){
       if(!d){auth.signOut();showAuth('Tu usuario todavía no tiene un plan cargado. Avisale a tu entrenador.');return;}
-      S.clients=[d];CURRENT_ROLE='alumno';
+      S.clients=[d];bumpUidFrom([d]);CURRENT_ROLE='alumno';
       UI.role='alumno';UI.tab='plan';UI.day=defaultDay(d);
       hideAuth();render(true);
     });
