@@ -72,6 +72,12 @@ h3{font-size:16px;font-weight:600;line-height:1.3;}
 .block{border:1px solid var(--line);border-radius:8px;padding:14px;margin:16px 0;}
 .block .ex{padding:14px 0;}
 .blockh{margin:22px 0 6px;color:var(--accent,inherit);}
+.gridwrap{overflow-x:auto;margin:6px 0 4px;-webkit-overflow-scrolling:touch;}
+.wkgrid{border-collapse:collapse;width:100%;}
+.wkgrid th,.wkgrid td{padding:4px;text-align:center;}
+.wkgrid thead th{font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;}
+.wkgrid tbody th{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap;padding-right:6px;}
+.wkgrid td input{width:52px;text-align:center;padding:8px 4px;min-height:40px;}
 .ex-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
 .cue{font-family:var(--serif);font-style:italic;color:var(--muted);font-size:14px;margin-top:2px;}
 .rounds{display:grid;gap:6px;margin-top:12px;}
@@ -315,6 +321,7 @@ var safeUrl=function(u){u=String(u||'').trim();return /^https?:\/\/\S+$/i.test(u
 var key=function(w,d,id){return w+'|'+d+'|'+id;};
 
 var MAX_SESSIONS=5;
+var MAX_WEEKS=6;
 var MONTHS_SHORT=['abr','may','jun','jul','ago','sep'];
 var MON=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 var CUR_WEEK=3;
@@ -463,6 +470,12 @@ function repsArr(e,w){
   while(a.length<e.rounds)a.push(a.length?a[a.length-1]:10);
   return a;
 }
+function weeksOf(c){
+  if(!c.weeksCount)c.weeksCount=4;
+  if(c.weeksCount>MAX_WEEKS)c.weeksCount=MAX_WEEKS;
+  if(c.weeksCount<1)c.weeksCount=1;
+  return c.weeksCount;
+}
 function rirArr(e,w){
   if(!e.rir[w-1]||!Array.isArray(e.rir[w-1])){var v=e.rir[w-1];e.rir[w-1]=[];if(typeof v==='number'){for(var i=0;i<e.rounds;i++)e.rir[w-1].push(v);}}
   var a=e.rir[w-1];
@@ -494,7 +507,7 @@ function findEx(c,id,day){
 }
 function extremes(c,item){
   var mx=null,mn=null;
-  for(var w=1;w<=4;w++){
+  for(var w=1;w<=weeksOf(c);w++){
     var arr=c.loads[key(w,item.d,item.ex.id)]||[];
     for(var r=0;r<item.ex.rounds;r++){
       var n=num(arr[r]);if(n==null)continue;
@@ -609,7 +622,9 @@ function exBlock(c,w,d,e){
 
 function scrTrain(c){
   var w=UI.week,d=UI.day,blocks=c.plan[d]||[],list=dayExercises(c,d);
-  var chipsW=[1,2,3,4].map(function(n){return '<button type="button" class="chip" data-act="week" data-v="'+n+'" aria-pressed="'+(n===w)+'">Semana '+n+'</button>';}).join('');
+  var nw=weeksOf(c);if(w>nw)w=UI.week=nw;
+  var wks=[];for(var wi=1;wi<=nw;wi++)wks.push(wi);
+  var chipsW=wks.map(function(n){return '<button type="button" class="chip" data-act="week" data-v="'+n+'" aria-pressed="'+(n===w)+'">Semana '+n+'</button>';}).join('');
   var chipsD=c.plan.map(function(_,i){return '<button type="button" class="chip" data-act="day" data-v="'+i+'" aria-pressed="'+(i===d)+'">Sesión '+(i+1)+'</button>';}).join('');
   var total=list.reduce(function(a,e){return a+e.rounds;},0),done=list.reduce(function(a,e){return a+filled(c,w,d,e);},0);
   var body=blocks.map(function(b){
@@ -625,25 +640,31 @@ function scrTrain(c){
 }
 
 function scrEdit(c){
-  var w=UI.week,d=UI.day,blocks=c.plan[d]||[];
-  var chipsW=[1,2,3,4].map(function(n){return '<button type="button" class="chip" data-act="week" data-v="'+n+'" aria-pressed="'+(n===w)+'">Semana '+n+'</button>';}).join('');
+  var d=UI.day,blocks=c.plan[d]||[],nw=weeksOf(c);
+  var wks=[];for(var wi=1;wi<=nw;wi++)wks.push(wi);
+  var weekOpts=[1,2,3,4,5,6].map(function(n){return '<option value="'+n+'"'+(n===nw?' selected':'')+'>'+n+'</option>';}).join('');
   var chipsD=c.plan.map(function(_,i){return '<button type="button" class="chip" data-act="day" data-v="'+i+'" aria-pressed="'+(i===d)+'">Sesión '+(i+1)+'</button>';}).join('');
   var body=blocks.map(function(b){
     var exHtml=(b.exercises||[]).map(function(e){
       var opts=[3,4,5,6].map(function(n){return '<option value="'+n+'"'+(n===e.rounds?' selected':'')+'>'+n+'</option>';}).join('');
-      var repsA=repsArr(e,w),rirA=rirArr(e,w);
-      var repInputs='',rirInputs='';
-      for(var r=0;r<e.rounds;r++){
-        repInputs+='<label class="fld"><span>R'+(r+1)+'</span><input type="text" inputmode="text" maxlength="24" data-repfield data-ex="'+e.id+'" data-r="'+r+'" value="'+esc(repsA[r])+'"></label>';
-        rirInputs+='<label class="fld"><span>R'+(r+1)+'</span><input type="number" inputmode="numeric" min="0" data-rirfield data-ex="'+e.id+'" data-r="'+r+'" value="'+esc(rirA[r])+'"></label>';
+      function grid(getArr,attr){
+        var head='<tr><th></th>'+wks.map(function(wn){return '<th>Sem '+wn+'</th>';}).join('')+'</tr>';
+        var rows='';
+        for(var r=0;r<e.rounds;r++){
+          rows+='<tr><th>R'+(r+1)+'</th>'+wks.map(function(wn){
+            var arr=getArr(e,wn);
+            return '<td><input type="text" inputmode="text" maxlength="24" '+attr+' data-ex="'+e.id+'" data-r="'+r+'" data-w="'+wn+'" value="'+esc(arr[r])+'"></td>';
+          }).join('')+'</tr>';
+        }
+        return '<div class="gridwrap"><table class="wkgrid">'+head+rows+'</table></div>';
       }
       return '<section class="ex edit">'+
         '<label class="fld">Ejercicio<input type="text" data-edit data-ex="'+e.id+'" data-field="name" value="'+esc(e.name)+'"></label>'+
         '<label class="fld">Rondas<select data-sel="rounds" data-ex="'+e.id+'">'+opts+'</select></label>'+
-        '<p class="legend" style="margin:8px 0 4px">Repeticiones por ronda</p>'+
-        '<div class="rounds" style="grid-template-columns:repeat('+e.rounds+',minmax(0,1fr))">'+repInputs+'</div>'+
-        '<p class="legend" style="margin:8px 0 4px">RIR por ronda</p>'+
-        '<div class="rounds" style="grid-template-columns:repeat('+e.rounds+',minmax(0,1fr))">'+rirInputs+'</div>'+
+        '<p class="legend" style="margin:8px 0 4px">Repeticiones — todas las semanas</p>'+
+        grid(repsArr,'data-repfield')+
+        '<p class="legend" style="margin:8px 0 4px">RIR — todas las semanas</p>'+
+        grid(rirArr,'data-rirfield')+
         '<label class="fld">Indicación técnica<input type="text" data-edit data-ex="'+e.id+'" data-field="cue" value="'+esc(e.cue)+'"></label>'+
         '<label class="fld">Video explicativo (link)<input type="url" inputmode="url" placeholder="https://" data-edit data-ex="'+e.id+'" data-field="video" value="'+esc(e.video)+'"></label>'+
         '<button type="button" class="link" data-act="del-ex" data-ex="'+e.id+'">Quitar ejercicio</button></section>';
@@ -657,8 +678,8 @@ function scrEdit(c){
       '<button type="button" class="link" data-act="del-block" data-block="'+b.id+'">Quitar bloque</button>'+
       '</section>';
   }).join('');
-  return '<h1>Plan de '+esc(c.first)+'</h1><p class="sub">Agrupá los ejercicios en bloques (series simples, dobles, triples, HIIT, tabata, AMRAP, etc). Las repeticiones y el RIR se definen por ronda.</p>'+clientBar(c)+
-    '<div class="chips" style="margin-top:12px" role="group" aria-label="Semana">'+chipsW+'</div>'+
+  return '<h1>Plan de '+esc(c.first)+'</h1><p class="sub">Agrupá los ejercicios en bloques (series simples, dobles, triples, HIIT, tabata, AMRAP, etc). Cargá las repeticiones y el RIR de todas las semanas juntas, sin cambiar de pestaña.</p>'+clientBar(c)+
+    '<label class="fld" style="max-width:220px;margin-top:12px">Cantidad de semanas del plan<select data-sel="weeksCount">'+weekOpts+'</select></label>'+
     (c.plan.length?'<div class="chips" role="group" aria-label="Sesión">'+chipsD+'</div>':'')+
     (c.plan.length<MAX_SESSIONS?'<button type="button" class="link" data-act="add-session">+ Agregar sesión ('+c.plan.length+'/'+MAX_SESSIONS+')</button>':'<p class="legend">Máximo de '+MAX_SESSIONS+' sesiones alcanzado.</p>')+
     (c.plan.length?'<h2 class="dayh">Sesión '+(d+1)+'</h2>'+
@@ -851,7 +872,7 @@ document.addEventListener('click',function(ev){
     t.disabled=true;t.textContent='Creando...';
     secondaryAuth.createUserWithEmailAndPassword(email,pass).then(function(cred){
       var newUid=cred.user.uid;
-      var blank={name:name,first:name.split(' ')[0],goal:'',scale:1,height:170,plan:[],loads:{},notes:{},nutri:[],unlocked:[],ficha:{}};
+      var blank={name:name,first:name.split(' ')[0],goal:'',scale:1,height:170,weeksCount:4,plan:[],loads:{},notes:{},nutri:[],unlocked:[],ficha:{}};
       return db.collection('clients').doc(newUid).set({state:JSON.stringify(blank)}).then(function(){return secondaryAuth.signOut();});
     }).then(function(){return loadAllClients();}).then(function(arr){
       S.clients=arr;closeSheet();render(true);toast('Alumno creado. Compartile el email y la contraseña.');
@@ -890,16 +911,16 @@ document.addEventListener('input',function(ev){
     var bid2=t.getAttribute('data-block'),blk2=(c.plan[UI.day]||[]).filter(function(b){return b.id===bid2;})[0];
     if(blk2){blk2.name=t.value;save();}
   }else if(t.hasAttribute('data-repfield')){
-    var f2=findEx(c,t.getAttribute('data-ex'),UI.day);if(!f2)return;
+    var w2=+t.getAttribute('data-w'),f2=findEx(c,t.getAttribute('data-ex'),UI.day);if(!f2)return;
     var r2=+t.getAttribute('data-r');
-    var a2=repsArr(f2.ex,UI.week);
+    var a2=repsArr(f2.ex,w2);
     a2[r2]=t.value;
     save();
   }else if(t.hasAttribute('data-rirfield')){
-    var f3=findEx(c,t.getAttribute('data-ex'),UI.day);if(!f3)return;
-    var r3=+t.getAttribute('data-r'),n3=parseInt(t.value,10);
-    var a3=rirArr(f3.ex,UI.week);
-    if(isFinite(n3)&&n3>=0)a3[r3]=n3;
+    var w3=+t.getAttribute('data-w'),f3=findEx(c,t.getAttribute('data-ex'),UI.day);if(!f3)return;
+    var r3=+t.getAttribute('data-r');
+    var a3=rirArr(f3.ex,w3);
+    a3[r3]=t.value;
     save();
   }else if(t.hasAttribute('data-edit')){
     var f=findEx(c,t.getAttribute('data-ex'),UI.day);if(!f)return;
@@ -914,6 +935,7 @@ document.addEventListener('change',function(ev){
   if(s==='ex'){UI.exId=t.value;render();}
   else if(s==='metric'){UI.metric=t.value;render();}
   else if(s==='rounds'){var cc=cur();var f=findEx(cc,t.getAttribute('data-ex'),UI.day);if(f){f.ex.rounds=+t.value;save();render();}}
+  else if(s==='weeksCount'){var c2=cur();c2.weeksCount=+t.value;if(UI.week>c2.weeksCount)UI.week=c2.weeksCount;save();render();}
 });
 
 document.addEventListener('keydown',function(ev){if(ev.key==='Escape')closeSheet();});
