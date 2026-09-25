@@ -72,15 +72,9 @@ h3{font-size:16px;font-weight:600;line-height:1.3;}
 .block{border:1px solid var(--line);border-radius:8px;padding:14px;margin:16px 0;}
 .block .ex{padding:14px 0;}
 .blockh{margin:22px 0 6px;color:var(--accent,inherit);}
-.gridwrap{overflow-x:auto;margin:6px 0 4px;-webkit-overflow-scrolling:touch;}
-.wkgrid{border-collapse:collapse;width:100%;}
-.wkgrid th,.wkgrid td{padding:4px;text-align:center;}
-.wkgrid thead th{font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;}
-.wkgrid tbody th{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap;padding-right:6px;}
-.wkgrid td input{width:52px;text-align:center;padding:8px 4px;min-height:40px;}
-.wkgrid.combo td{display:flex;flex-direction:column;gap:3px;}
-.wkgrid.combo td input{min-height:32px;padding:5px 2px;font-size:13px;}
-.wkgrid.combo td input[data-rirfield]{color:var(--muted);font-size:12px;}
+.weekblock{border-top:1px dashed var(--line);padding-top:12px;margin-top:12px;}
+.weekblock:first-child{border-top:none;padding-top:0;margin-top:4px;}
+.weekh{font-weight:600;margin:0 0 2px;}
 .ex-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
 .cue{font-family:var(--serif);font-style:italic;color:var(--muted);font-size:14px;margin-top:2px;}
 .rounds{display:grid;gap:6px;margin-top:12px;}
@@ -651,17 +645,20 @@ function scrEdit(c){
     var exHtml=(b.exercises||[]).map(function(e){
       var opts=[3,4,5,6].map(function(n){return '<option value="'+n+'"'+(n===e.rounds?' selected':'')+'>'+n+'</option>';}).join('');
       function combinedGrid(){
-        var rs=[];for(var ri=0;ri<e.rounds;ri++)rs.push(ri);
-        var head='<tr><th></th>'+rs.map(function(ri){return '<th>R'+(ri+1)+'</th>';}).join('')+'</tr>';
-        var rows='';
-        wks.forEach(function(wn){
+        return wks.map(function(wn){
           var repsA=repsArr(e,wn),rirA=rirArr(e,wn);
-          rows+='<tr><th>Sem '+wn+'</th>'+rs.map(function(ri){
-            return '<td><input type="text" inputmode="text" maxlength="24" data-repfield data-ex="'+e.id+'" data-r="'+ri+'" data-w="'+wn+'" value="'+esc(repsA[ri])+'" placeholder="reps" aria-label="Repeticiones semana '+wn+' ronda '+(ri+1)+'">'+
-              '<input type="text" inputmode="text" maxlength="12" data-rirfield data-ex="'+e.id+'" data-r="'+ri+'" data-w="'+wn+'" value="'+esc(rirA[ri])+'" placeholder="RIR" aria-label="RIR semana '+wn+' ronda '+(ri+1)+'"></td>';
-          }).join('')+'</tr>';
-        });
-        return '<div class="gridwrap"><table class="wkgrid combo">'+head+rows+'</table></div>';
+          var repInputs='',rirInputs='';
+          for(var r=0;r<e.rounds;r++){
+            repInputs+='<label class="fld"><span>R'+(r+1)+'</span><input type="text" inputmode="text" maxlength="24" data-repfield data-ex="'+e.id+'" data-r="'+r+'" data-w="'+wn+'" value="'+esc(repsA[r])+'"></label>';
+            rirInputs+='<label class="fld"><span>R'+(r+1)+'</span><input type="text" inputmode="text" maxlength="12" data-rirfield data-ex="'+e.id+'" data-r="'+r+'" data-w="'+wn+'" value="'+esc(rirA[r])+'"></label>';
+          }
+          return '<div class="weekblock"><p class="weekh">Semana '+wn+'</p>'+
+            '<p class="legend" style="margin:2px 0 4px">Reps</p>'+
+            '<div class="rounds" style="grid-template-columns:repeat('+e.rounds+',minmax(0,1fr))">'+repInputs+'</div>'+
+            '<p class="legend" style="margin:8px 0 4px">RIR</p>'+
+            '<div class="rounds" style="grid-template-columns:repeat('+e.rounds+',minmax(0,1fr))">'+rirInputs+'</div>'+
+            '</div>';
+        }).join('');
       }
       return '<section class="ex edit">'+
         '<label class="fld">Ejercicio<input type="text" data-edit data-ex="'+e.id+'" data-field="name" value="'+esc(e.name)+'"></label>'+
