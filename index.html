@@ -651,15 +651,16 @@ function scrEdit(c){
     var exHtml=(b.exercises||[]).map(function(e){
       var opts=[3,4,5,6].map(function(n){return '<option value="'+n+'"'+(n===e.rounds?' selected':'')+'>'+n+'</option>';}).join('');
       function combinedGrid(){
-        var head='<tr><th></th>'+wks.map(function(wn){return '<th>Sem '+wn+'</th>';}).join('')+'</tr>';
+        var rs=[];for(var ri=0;ri<e.rounds;ri++)rs.push(ri);
+        var head='<tr><th></th>'+rs.map(function(ri){return '<th>R'+(ri+1)+'</th>';}).join('')+'</tr>';
         var rows='';
-        for(var r=0;r<e.rounds;r++){
-          rows+='<tr><th>R'+(r+1)+'</th>'+wks.map(function(wn){
-            var repsA=repsArr(e,wn),rirA=rirArr(e,wn);
-            return '<td><input type="text" inputmode="text" maxlength="24" data-repfield data-ex="'+e.id+'" data-r="'+r+'" data-w="'+wn+'" value="'+esc(repsA[r])+'" placeholder="reps" aria-label="Repeticiones semana '+wn+' ronda '+(r+1)+'">'+
-              '<input type="text" inputmode="text" maxlength="12" data-rirfield data-ex="'+e.id+'" data-r="'+r+'" data-w="'+wn+'" value="'+esc(rirA[r])+'" placeholder="RIR" aria-label="RIR semana '+wn+' ronda '+(r+1)+'"></td>';
+        wks.forEach(function(wn){
+          var repsA=repsArr(e,wn),rirA=rirArr(e,wn);
+          rows+='<tr><th>Sem '+wn+'</th>'+rs.map(function(ri){
+            return '<td><input type="text" inputmode="text" maxlength="24" data-repfield data-ex="'+e.id+'" data-r="'+ri+'" data-w="'+wn+'" value="'+esc(repsA[ri])+'" placeholder="reps" aria-label="Repeticiones semana '+wn+' ronda '+(ri+1)+'">'+
+              '<input type="text" inputmode="text" maxlength="12" data-rirfield data-ex="'+e.id+'" data-r="'+ri+'" data-w="'+wn+'" value="'+esc(rirA[ri])+'" placeholder="RIR" aria-label="RIR semana '+wn+' ronda '+(ri+1)+'"></td>';
           }).join('')+'</tr>';
-        }
+        });
         return '<div class="gridwrap"><table class="wkgrid combo">'+head+rows+'</table></div>';
       }
       return '<section class="ex edit">'+
