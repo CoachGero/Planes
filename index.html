@@ -130,6 +130,12 @@ textarea{min-height:76px;resize:vertical;}
 .rb-side{text-align:right;font-size:12px;color:var(--muted);flex:none;}
 .bar{display:block;width:96px;height:5px;background:var(--surface-2);border-radius:3px;margin:0 0 6px auto;overflow:hidden;}
 .bar i{display:block;height:100%;background:var(--red);}
+.memo{border:1px solid var(--line);border-left:3px solid var(--red);border-radius:4px;background:var(--surface);padding:10px 12px;margin-top:12px;font-size:13px;}
+.memo-h{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:600;}
+.memo-k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:8px;}
+.memo-v{margin-top:2px;max-height:120px;overflow:auto;line-height:1.4;}
+.memo-v.alert{color:var(--red-text);font-weight:600;}
+.memo-v.empty{color:var(--muted);font-style:italic;}
 .who{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--line);border-radius:4px;padding:8px 8px 8px 12px;margin-top:14px;font-size:13px;}
 .who strong{font-weight:600;}
 
@@ -1016,6 +1022,19 @@ function scrTrain(c){
     '<a class="btn ghost wide" href="'+WA+'" target="_blank" rel="noopener">Escribirle a mi entrenador por WhatsApp</a>';
 }
 
+function memoCard(c){
+  if(UI.role!=='trainer')return '';
+  var f=fichaOf(c),br=function(t){return esc(String(t).trim()).replace(/\n/g,'<br>');};
+  var les=String(f.lesiones).trim(),hist=String(f.historialLesiones).trim(),obj=String(f.objetivos).trim();
+  var hayLes=/^s[ií]/i.test(les)||hist!=='';
+  var lesHtml;
+  if(hayLes)lesHtml='<div class="memo-v alert">'+(les?br(les)+(hist?'<br>':''):'')+(hist?'<span style="font-weight:400">'+br(hist)+'</span>':'')+'</div>';
+  else if(les)lesHtml='<div class="memo-v">'+br(les)+'</div>';
+  else lesHtml='<div class="memo-v empty">Sin cargar</div>';
+  return '<div class="memo"><div class="memo-h"><span>Ayuda memoria</span><button type="button" class="link" data-act="tab" data-v="ficha">Editar en la Ficha</button></div>'+
+    '<div class="memo-k">Lesiones</div>'+lesHtml+
+    '<div class="memo-k">Objetivos</div>'+(obj?'<div class="memo-v">'+br(obj)+'</div>':'<div class="memo-v empty">Sin cargar</div>')+'</div>';
+}
 function scrEdit(c){
   var d=UI.day,blocks=c.plan[d]||[],nw=weeksOf(c);
   var wks=[];for(var wi=1;wi<=nw;wi++)wks.push(wi);
@@ -1058,7 +1077,7 @@ function scrEdit(c){
       '<button type="button" class="link" data-act="del-block" data-block="'+b.id+'">Quitar bloque</button>'+
       '</section>';
   }).join('');
-  return '<h1>Plan de '+esc(c.first)+'</h1><p class="sub">Agrupá los ejercicios en bloques (series simples, dobles, triples, HIIT, tabata, AMRAP, etc). Cargá las repeticiones y el RIR de todas las semanas juntas, sin cambiar de pestaña.</p>'+clientBar(c)+
+  return '<h1>Plan de '+esc(c.first)+'</h1><p class="sub">Agrupá los ejercicios en bloques (series simples, dobles, triples, HIIT, tabata, AMRAP, etc). Cargá las repeticiones y el RIR de todas las semanas juntas, sin cambiar de pestaña.</p>'+clientBar(c)+memoCard(c)+
     '<label class="fld" style="max-width:220px;margin-top:12px">Cantidad de semanas del plan<select data-sel="weeksCount">'+weekOpts+'</select></label>'+
     (c.plan.length?'<div class="chips" role="group" aria-label="Sesión">'+chipsD+'</div>':'')+
     (c.plan.length<MAX_SESSIONS?'<button type="button" class="link" data-act="add-session">+ Agregar sesión ('+c.plan.length+'/'+MAX_SESSIONS+')</button>':'<p class="legend">Máximo de '+MAX_SESSIONS+' sesiones alcanzado.</p>')+
