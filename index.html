@@ -215,52 +215,56 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
 <style>
   :root{--bg:#000;--surface:#131313;--line:#2a2a2a;--text:#f5f5f5;--muted:#a3a3a3;--red:#d91f26;--red-text:#ff4d52;}
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:16px;max-width:520px;margin:0 auto;}
-  h1{font-size:20px;margin:0 0 4px;}
+  body{margin:0 auto;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:12px 4px 24px;max-width:520px;font-size:14px;}
   h2{font-size:15px;margin:0 0 8px;}
-  p.sub{color:var(--muted);font-size:13px;margin:0 0 16px;}
+  p.sub{color:var(--muted);font-size:12px;margin:0 0 12px;}
   .box{border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px;background:var(--surface);}
-  input[type=file],input[type=number]{color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px;}
-  label.f{display:block;font-size:12px;color:var(--muted);margin-bottom:8px;}
-  label.f input{width:100%;margin-top:3px;}
-  .planos{display:flex;border:1px solid var(--line);border-radius:999px;padding:3px;margin-bottom:12px;}
-  .planos button{flex:1;border:0;background:transparent;color:var(--muted);border-radius:999px;padding:8px;font-weight:600;font-size:13px;}
-  .planos button.on{background:var(--red);color:#fff;}
+  input,select{color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;font-size:16px;width:100%;margin-top:3px;}
+  label.f{display:block;font-size:12px;color:var(--muted);margin-bottom:10px;}
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
   .wrap{position:relative;}
   video,canvas{width:100%;display:block;border-radius:6px;}
   canvas{position:absolute;top:0;left:0;pointer-events:none;}
-  .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
   .stat{border:1px solid var(--line);border-radius:6px;padding:8px;text-align:center;}
   .stat .k{font-size:11px;color:var(--muted);}
   .stat .v{font-weight:700;font-size:20px;color:var(--red-text);}
-  .stat .rom{font-size:11px;color:var(--muted);margin-top:2px;}
-  button.act{background:var(--red);color:#fff;border:0;border-radius:4px;padding:10px 14px;font-weight:600;font-size:13px;margin-top:10px;margin-right:8px;}
+  button{font:inherit;cursor:pointer;}
+  button.act{background:var(--red);color:#fff;border:0;border-radius:4px;padding:10px 14px;font-weight:600;font-size:13px;margin:10px 8px 0 0;}
   button.ghost{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:4px;padding:10px 14px;font-weight:600;font-size:13px;margin-top:10px;}
+  button.x{background:none;border:0;color:var(--muted);text-decoration:underline;font-size:12px;padding:4px 0;}
   .status{font-size:12px;color:var(--muted);margin-top:8px;}
-  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}
-  th,td{padding:6px 4px;text-align:center;border-bottom:1px solid var(--line);}
+  .scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
+  th,td{padding:6px 4px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap;}
   th{color:var(--muted);font-weight:500;}
-  tr.peor td{color:var(--red-text);font-weight:600;}
-  .resumen p{font-size:13px;margin:4px 0;}
-  .resumen strong{color:var(--red-text);}
+  tr.best td{color:var(--red-text);font-weight:600;}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+  .kpi{border:1px solid var(--line);border-radius:6px;padding:10px;}
+  .kpi .k{font-size:11px;color:var(--muted);}
+  .kpi .v{font-weight:700;font-size:20px;color:var(--red-text);}
+  .kpi .d{font-size:11px;color:var(--muted);}
+  .note{font-size:12px;color:var(--muted);margin-top:10px;}
+  details.fold{border:1px solid var(--line);border-radius:6px;margin-top:8px;padding:0 10px;}
+  details.fold summary{padding:12px 0;font-weight:600;cursor:pointer;}
+  .day{font-size:12px;color:var(--muted);margin:10px 0 4px;}
+  .ent{border-top:1px solid var(--line);padding:8px 0;font-size:12px;}
+  .warn{color:var(--red-text);}
 </style>
 </head>
 <body>
-<h1>Test de Movimiento</h1>
-<p class="sub">Corre 100% en el navegador. Subí un video completo de una serie (varias repeticiones) y esperá a que termine para ver el análisis.</p>
-
-<div class="planos">
-  <button id="btnSagital" class="on">Plano sagital</button>
-  <button id="btnFrontal">Plano frontal</button>
-</div>
+<p class="sub" id="who">Grabá al alumno de costado (plano sagital), de cuerpo entero y con la cámara quieta. Subí un video con 3 a 5 repeticiones.</p>
 
 <div class="box">
-  <label class="f">Calibración (opcional, para unidades reales): altura de referencia en la imagen (px)
-    <input type="number" id="calPx" placeholder="ej: 480"></label>
-  <label class="f">Esa misma altura, en cm real
-    <input type="number" id="calCm" placeholder="ej: 170"></label>
-  <label class="f">Carga levantada, en kg (opcional, para estimar potencia)
-    <input type="number" id="carga" placeholder="ej: 60"></label>
+  <label class="f">Ejercicio
+    <select id="ejSel"></select></label>
+  <label class="f" id="ejOtroW" style="display:none">Nombre del ejercicio
+    <input type="text" id="ejOtro" placeholder="ej: Prensa"></label>
+  <div class="g3">
+    <label class="f">Peso corporal (kg)<input type="number" inputmode="decimal" id="pesoC"></label>
+    <label class="f">Carga (kg)<input type="number" inputmode="decimal" id="carga"></label>
+    <label class="f">Altura (cm)<input type="number" inputmode="decimal" id="altura"></label>
+  </div>
   <input type="file" id="fileInput" accept="video/*">
   <div class="status" id="status">Cargando modelo...</div>
 </div>
@@ -269,209 +273,208 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
   <video id="video" playsinline muted></video>
   <canvas id="overlay"></canvas>
 </div>
-
 <div class="stats" id="statsBox"></div>
 <button class="act" id="analizarBtn">Analizar repeticiones</button>
 <button class="ghost" id="resetBtn">Reiniciar</button>
 
-<div class="box" id="resultados" style="display:none">
-  <h2>Repeticiones detectadas</h2>
-  <table id="tablaReps"><thead></thead><tbody></tbody></table>
-  <div class="resumen" id="resumen"></div>
+<div class="box" id="resultados" style="display:none;margin-top:14px">
+  <h2>Resultados</h2>
+  <div class="kpis" id="kpis"></div>
+  <div class="scroll"><table id="tablaReps"><thead></thead><tbody></tbody></table></div>
+  <div class="note" id="notas"></div>
+  <button class="act" id="guardarBtn">Guardar en la carpeta del ejercicio</button>
+</div>
+
+<div class="box">
+  <h2>Carpetas guardadas</h2>
+  <div id="carpetas"></div>
 </div>
 
 <script type="module">
 import { FilesetResolver, PoseLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+const $=id=>document.getElementById(id);
+const video=$('video'),canvas=$('overlay'),ctx=canvas.getContext('2d');
 
-const statusEl=document.getElementById('status'), video=document.getElementById('video'), canvas=document.getElementById('overlay'),
-  ctx=canvas.getContext('2d'), fileInput=document.getElementById('fileInput'), resetBtn=document.getElementById('resetBtn'),
-  analizarBtn=document.getElementById('analizarBtn'), statsBox=document.getElementById('statsBox'),
-  resultados=document.getElementById('resultados'), tabla=document.getElementById('tablaReps'), resumenEl=document.getElementById('resumen'),
-  btnSagital=document.getElementById('btnSagital'), btnFrontal=document.getElementById('btnFrontal');
+/* ---- ejercicios: articulaciones dominantes y punto que se sigue para la velocidad ---- */
+const EJ={
+  'Sentadilla':{j:['rodilla','cadera'],p:'cerv'},
+  'Peso muerto':{j:['cadera','tronco'],p:'cerv'},
+  'Zancada':{j:['rodilla','cadera'],p:'cerv'},
+  'Hip thrust':{j:['cadera','rodilla'],p:'cad'},
+  'Otro':{j:['rodilla','cadera'],p:'cerv'}
+};
+const JN={rodilla:'Rodilla',cadera:'Cadera',tronco:'Tronco (inclinación)',cuello:'Cuello'};
+$('ejSel').innerHTML=Object.keys(EJ).map(k=>`<option>${k}</option>`).join('');
+const ejNombre=()=>$('ejSel').value==='Otro'?($('ejOtro').value.trim()||'Otro'):$('ejSel').value;
+const ejDef=()=>EJ[$('ejSel').value];
+$('ejSel').onchange=()=>{$('ejOtroW').style.display=$('ejSel').value==='Otro'?'block':'none';buildStats();clearAll();};
 
-const IDX={LS:11,RS:12,LE:13,RE:14,LW:15,RW:16,LH:23,RH:24,LK:25,RK:26,LA:27,RA:28};
-let plane='sagital', poseLandmarker=null, running=false, dataLog=[];
-let rom={a:[999,-999],b:[999,-999],c:[999,-999]};
+/* ---- almacenamiento: Firestore del index (via puente) o, si se abre solo, localStorage ---- */
+const B=(()=>{try{return window.parent&&window.parent!==window&&window.parent.testBridge||null;}catch(e){return null;}})();
+const store={
+  info:()=>B?B.info():null,
+  list:()=>{if(B)return B.list();try{return JSON.parse(localStorage.getItem('tm_tests')||'[]');}catch(e){return[];}},
+  add:r=>{if(B)return B.add(r);try{const l=store.list();l.push(r);localStorage.setItem('tm_tests',JSON.stringify(l));return true;}catch(e){return false;}},
+  del:id=>{if(B)return B.del(id);try{localStorage.setItem('tm_tests',JSON.stringify(store.list().filter(t=>t.id!==id)));return true;}catch(e){return false;}}
+};
+const inf=store.info();
+if(inf){
+  $('who').textContent='Alumno: '+inf.name+'. Grabalo de costado (plano sagital), de cuerpo entero y con la cámara quieta. Video con 3 a 5 repeticiones.';
+  if(inf.weight)$('pesoC').value=inf.weight; if(inf.height)$('altura').value=inf.height;
+}
 
+/* ---- geometría ---- */
 function ang3(a,b,c){
   const ba=[a[0]-b[0],a[1]-b[1]],bc=[c[0]-b[0],c[1]-b[1]];
-  const dot=ba[0]*bc[0]+ba[1]*bc[1],mA=Math.hypot(...ba),mB=Math.hypot(...bc);
-  return Math.acos(Math.max(-1,Math.min(1,dot/(mA*mB+1e-9))))*180/Math.PI;
+  const d=ba[0]*bc[0]+ba[1]*bc[1],m=Math.hypot(...ba)*Math.hypot(...bc)+1e-9;
+  return Math.acos(Math.max(-1,Math.min(1,d/m)))*180/Math.PI;
 }
-function lineAng(p,q){ return Math.atan2(q[1]-p[1],q[0]-p[0])*180/Math.PI; }
+const vert=(a,b)=>Math.abs(Math.atan2(b[0]-a[0],b[1]-a[1]))*180/Math.PI; // 0° = tronco vertical (cervical sobre cadera)
+let poseLandmarker=null,running=false,dataLog=[],last=null;
 
-function statLabels(){
-  return plane==='sagital'
-    ? [['a','Rodilla der.'],['b','Cadera der.'],['c','Codo der.']]
-    : [['a','Rotación hombros'],['b','Rotación cadera'],['c','—']];
+function buildStats(){
+  $('statsBox').innerHTML=ejDef().j.map(k=>`<div class="stat"><div class="k">${JN[k]}</div><div class="v" id="v-${k}">--</div></div>`).join('');
 }
-function buildStatsBox(){
-  statsBox.innerHTML = statLabels().map(([k,l])=>l==='—'?'':`
-    <div class="stat"><div class="k">${l}</div><div class="v" id="v-${k}">--</div><div class="rom" id="rom-${k}">ROM: --</div></div>`).join('');
-}
-function setStat(k,val){
-  const v=document.getElementById('v-'+k), r=document.getElementById('rom-'+k);
-  if(!v)return;
-  if(val==null){v.textContent='--';r.textContent='ROM: --';return;}
-  v.textContent=val.toFixed(0)+'°';
-  rom[k]=[Math.min(rom[k][0],val),Math.max(rom[k][1],val)];
-  const rr=rom[k][1]-rom[k][0];
-  r.textContent = rom[k][0]>rom[k][1] ? 'ROM: --' : 'ROM: '+rr.toFixed(0)+'°';
-}
-function clearStats(){
-  rom={a:[999,-999],b:[999,-999],c:[999,-999]};
-  statLabels().forEach(([k])=>setStat(k,null));
-  dataLog=[];
-  resultados.style.display='none';
-  tabla.querySelector('thead').innerHTML=''; tabla.querySelector('tbody').innerHTML=''; resumenEl.innerHTML='';
-}
-
-btnSagital.onclick=()=>{plane='sagital';btnSagital.classList.add('on');btnFrontal.classList.remove('on');buildStatsBox();clearStats();};
-btnFrontal.onclick=()=>{plane='frontal';btnFrontal.classList.add('on');btnSagital.classList.remove('on');buildStatsBox();clearStats();};
-buildStatsBox();
+buildStats();
+function clearAll(){dataLog=[];last=null;$('resultados').style.display='none';ejDef().j.forEach(k=>{const e=$('v-'+k);if(e)e.textContent='--';});}
+$('resetBtn').onclick=clearAll;
 
 async function setup(){
-  statusEl.textContent='Descargando modelo de detección de pose (solo la primera vez)...';
+  $('status').textContent='Descargando modelo de detección de pose (solo la primera vez)...';
   const vision=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
   poseLandmarker=await PoseLandmarker.createFromOptions(vision,{
     baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",delegate:"GPU"},
-    runningMode:"VIDEO", numPoses:1
-  });
-  statusEl.textContent='Modelo listo. Subí un video para empezar.';
+    runningMode:"VIDEO",numPoses:1});
+  $('status').textContent='Modelo listo. Completá los datos y subí un video.';
 }
-setup().catch(e=>statusEl.textContent='Error cargando el modelo: '+e.message);
+setup().catch(e=>$('status').textContent='Error cargando el modelo: '+e.message);
 
-fileInput.addEventListener('change',(e)=>{
-  const file=e.target.files[0]; if(!file)return;
-  clearStats();
-  video.src=URL.createObjectURL(file);
-  video.onloadedmetadata=()=>{ canvas.width=video.videoWidth; canvas.height=video.videoHeight; video.play(); running=true; loop(); };
+$('fileInput').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f||!poseLandmarker)return;
+  clearAll();video.src=URL.createObjectURL(f);
+  video.onloadedmetadata=()=>{canvas.width=video.videoWidth;canvas.height=video.videoHeight;video.playbackRate=0.5;video.play();running=true;loop();};
 });
-video.addEventListener('ended', analizar);
-analizarBtn.addEventListener('click', analizar);
-resetBtn.addEventListener('click', clearStats);
+video.addEventListener('ended',analizar);
+$('analizarBtn').addEventListener('click',analizar);
 
+/* ---- detección cuadro a cuadro: cabeza, cervical, cadera, rodilla, pie ---- */
+let lastT=-1;
 function loop(){
   if(!running)return;
-  if(video.paused||video.ended){ requestAnimationFrame(loop); return; }
+  if(video.paused||video.ended||video.currentTime===lastT){requestAnimationFrame(loop);return;}
+  lastT=video.currentTime;
   const res=poseLandmarker.detectForVideo(video,performance.now());
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(res.landmarks && res.landmarks.length){
-    const lm=res.landmarks[0]; const P=(i)=>[lm[i].x*canvas.width, lm[i].y*canvas.height];
+  if(res.landmarks&&res.landmarks.length){
+    const lm=res.landmarks[0],W=canvas.width,H=canvas.height;
+    const vis=(a,b,c)=>((lm[a].visibility||0)+(lm[b].visibility||0)+(lm[c].visibility||0));
+    const der=vis(24,26,28)>=vis(23,25,27); // lado más visible
+    const [ih,ik,ia,ifo]=der?[24,26,28,32]:[23,25,27,31];
+    const P=i=>[lm[i].x*W,lm[i].y*H];
+    const cabeza=P(0),cerv=[(P(11)[0]+P(12)[0])/2,(P(11)[1]+P(12)[1])/2],cad=P(ih),rod=P(ik),tob=P(ia),pie=P(ifo);
+    ctx.strokeStyle='#f5f5f5';ctx.lineWidth=2;ctx.beginPath();
+    [cabeza,cerv,cad,rod,tob,pie].forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();
     ctx.fillStyle='#ff4d52';
-    [IDX.RS,IDX.RE,IDX.RW,IDX.RH,IDX.RK,IDX.RA,IDX.LS,IDX.LH].forEach(i=>{const[x,y]=P(i);ctx.beginPath();ctx.arc(x,y,4,0,7);ctx.fill();});
-    ctx.strokeStyle='#f5f5f5';ctx.lineWidth=2;
-    const ln=(i,j)=>{const[x1,y1]=P(i),[x2,y2]=P(j);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();};
-    ln(IDX.RS,IDX.RE);ln(IDX.RE,IDX.RW);ln(IDX.RS,IDX.RH);ln(IDX.RH,IDX.RK);ln(IDX.RK,IDX.RA);ln(IDX.LS,IDX.RS);ln(IDX.LH,IDX.RH);
-
-    const rodilla=ang3(P(IDX.RH),P(IDX.RK),P(IDX.RA));
-    const cadera=ang3(P(IDX.RS),P(IDX.RH),P(IDX.RK));
-    const codo=ang3(P(IDX.RS),P(IDX.RE),P(IDX.RW));
-    const rotHombros=lineAng(P(IDX.LS),P(IDX.RS));
-    const rotCadera=lineAng(P(IDX.LH),P(IDX.RH));
-    const hipX=(P(IDX.LH)[0]+P(IDX.RH)[0])/2, hipY=(P(IDX.LH)[1]+P(IDX.RH)[1])/2;
-
-    if(plane==='sagital'){ setStat('a',rodilla); setStat('b',cadera); setStat('c',codo); }
-    else { setStat('a',rotHombros); setStat('b',rotCadera); }
-
-    dataLog.push({t:video.currentTime, rodilla,cadera,codo,rotHombros,rotCadera,hipX,hipY});
+    [[cabeza,7],[cerv,5],[cad,5],[rod,5],[tob,4],[pie,4]].forEach(([p,r])=>{ctx.beginPath();ctx.arc(p[0],p[1],r,0,7);ctx.fill();});
+    const a={rodilla:ang3(cad,rod,tob),cadera:ang3(cerv,cad,rod),tronco:vert(cad,cerv),cuello:ang3(cabeza,cerv,cad)};
+    ejDef().j.forEach(k=>{const e=$('v-'+k);if(e)e.textContent=a[k].toFixed(0)+'°';});
+    dataLog.push({t:video.currentTime,a,yc:cerv[1],yh:cad[1],span:tob[1]-cabeza[1]});
   }
   requestAnimationFrame(loop);
 }
 
-/* --- análisis de repeticiones --- */
-function suavizar(arr){
-  return arr.map((v,i)=>{
-    const s=arr.slice(Math.max(0,i-2),i+3);
-    return s.reduce((a,b)=>a+b,0)/s.length;
-  });
-}
-function encontrarExtremos(vals, tiempos, prom, sepSeg){
-  const sv=suavizar(vals), out=[];
-  for(let i=1;i<sv.length-1;i++){
-    const esMax=sv[i]>sv[i-1]&&sv[i]>=sv[i+1], esMin=sv[i]<sv[i-1]&&sv[i]<=sv[i+1];
-    if(!esMax && !esMin) continue;
-    const tipo=esMax?'max':'min';
-    const ultimo=out[out.length-1];
-    if(ultimo && ultimo.tipo===tipo && (tiempos[i]-ultimo.t)<sepSeg){
-      if((tipo==='max'&&vals[i]>ultimo.val)||(tipo==='min'&&vals[i]<ultimo.val)){ out[out.length-1]={i,t:tiempos[i],val:vals[i],tipo}; }
-      continue;
-    }
-    if(ultimo && Math.abs(vals[i]-ultimo.val)<prom) continue;
-    out.push({i,t:tiempos[i],val:vals[i],tipo});
+/* ---- análisis ---- */
+const suav=arr=>arr.map((_,i)=>{const s=arr.slice(Math.max(0,i-2),i+3);return s.reduce((a,b)=>a+b,0)/s.length;});
+function extremos(v,t,prom){
+  const s=suav(v),o=[];
+  for(let i=1;i<s.length-1;i++){
+    const mx=s[i]>s[i-1]&&s[i]>=s[i+1],mn=s[i]<s[i-1]&&s[i]<=s[i+1];
+    if(!mx&&!mn)continue;
+    const tp=mx?'max':'min',l=o[o.length-1];
+    if(l&&l.tp===tp){if((mx&&s[i]>l.v)||(mn&&s[i]<l.v))o[o.length-1]={i,t:t[i],v:s[i],tp};continue;}
+    if(l&&Math.abs(s[i]-l.v)<prom)continue;
+    o.push({i,t:t[i],v:s[i],tp});
   }
-  return out;
+  return o;
 }
-function velocidadEn(i, calibPxPorCm){
-  if(i<1||i>=dataLog.length)return 0;
-  const d0=dataLog[i-1], d1=dataLog[i], dt=d1.t-d0.t||0.033;
-  const dist=Math.hypot(d1.hipX-d0.hipX, d1.hipY-d0.hipY);
-  const distCm = calibPxPorCm ? dist/calibPxPorCm : dist;
-  return distCm/dt; // cm/s si hay calibración, si no px/s
-}
+const f1=(x,d=2)=>x==null?'--':x.toFixed(d);
 
 function analizar(){
-  if(dataLog.length<10){ resumenEl.innerHTML='<p>Necesito un video más largo (con al menos una repetición completa) para poder analizar.</p>'; resultados.style.display='block'; return; }
-  const calPx=parseFloat(document.getElementById('calPx').value), calCm=parseFloat(document.getElementById('calCm').value);
-  const calibPxPorCm = (calPx&&calCm) ? calPx/calCm : null;
-  const carga = parseFloat(document.getElementById('carga').value) || null;
-
-  const tiempos=dataLog.map(d=>d.t);
-  const serie = plane==='sagital' ? dataLog.map(d=>d.rodilla) : dataLog.map(d=>d.rotHombros);
-  const secSerie = plane==='sagital' ? dataLog.map(d=>d.cadera) : dataLog.map(d=>d.rotCadera);
-  const prom = plane==='sagital' ? 8 : 5;
-  const extremos = encontrarExtremos(serie, tiempos, prom, 0.35);
-
-  const reps=[];
-  for(let i=0;i<extremos.length-2;i++){
-    const e0=extremos[i], e1=extremos[i+1], e2=extremos[i+2];
-    if(e0.tipo!==e2.tipo || e1.tipo===e0.tipo) continue;
-    let vmax=-1,vmaxT=0;
-    for(let k=e0.i;k<=e2.i;k++){ const v=Math.abs(velocidadEn(k,calibPxPorCm)); if(v>vmax){vmax=v;vmaxT=tiempos[k];} }
-    reps.push({
-      inicio:e0.val, medio:e1.val, final:e2.val,
-      secInicio:secSerie[e0.i], secFinal:secSerie[e2.i],
-      t0:e0.t, t2:e2.t, dur:e2.t-e0.t, velPico:vmax
-    });
-  }
-  if(!reps.length){ resumenEl.innerHTML='<p>No pude detectar repeticiones completas. Probá con un video donde el movimiento sea más amplio o con menos recorte al inicio/final.</p>'; resultados.style.display='block'; return; }
-
-  const base=reps[0];
-  reps.forEach((r,idx)=>{
-    r.n=idx+1;
-    r.desvTecnica = Math.abs(r.inicio-base.inicio) + Math.abs(r.final-base.final);
-    r.potPico = carga ? (carga*9.81*(r.velPico/100)) : null;
+  if(!dataLog.length)return;
+  const peso=parseFloat($('pesoC').value),carga=parseFloat($('carga').value)||0,alt=parseFloat($('altura').value);
+  const nt=$('notas');
+  if(!peso||!alt){$('resultados').style.display='block';$('kpis').innerHTML='';$('tablaReps').querySelector('thead').innerHTML='';$('tablaReps').querySelector('tbody').innerHTML='';
+    nt.innerHTML='<span class="warn">Completá peso corporal y altura del alumno para calcular velocidad y potencia, y volvé a tocar “Analizar”.</span>';$('guardarBtn').style.display='none';return;}
+  const def=ejDef(),[j1,j2]=def.j,t=dataLog.map(d=>d.t);
+  // escala px→cm usando la altura (nariz a tobillo ≈ 88% de la estatura), tomando el cuadro más erguido
+  const span=Math.max(...suav(dataLog.map(d=>d.span)));
+  const pxCm=span/(alt*0.88);
+  const ext=extremos(dataLog.map(d=>d.a[j1]),t,15);
+  const ys=suav(dataLog.map(d=>def.p==='cad'?d.yh:d.yc));
+  const vy=ys.map((_,i)=>{const a=Math.max(0,i-1),b=Math.min(ys.length-1,i+1);return b>a?-(ys[b]-ys[a])/(t[b]-t[a])/pxCm/100:0;}); // m/s hacia arriba
+  let reps=[];
+  ext.forEach((e,j)=>{
+    const nx=ext[j+1];if(e.tp!=='min'||!nx||nx.tp!=='max')return;
+    const pv=ext[j-1],ini=pv?pv.i:0,fin=nx.i;
+    let vp=0;for(let k=e.i;k<=fin;k++)if(vy[k]>vp)vp=vy[k];
+    const rg=k=>{const v=dataLog.slice(ini,fin+1).map(d=>d.a[k]);return[Math.min(...v),Math.max(...v)];};
+    reps.push({ang:{[j1]:rg(j1),[j2]:rg(j2)},v:vp,p:(peso+carga)*9.81*vp});
   });
-  const peorTecnica = reps.reduce((a,b)=>b.desvTecnica>a.desvTecnica?b:a, reps[0]);
-  const metricaVel = carga ? reps.map(r=>r.potPico) : reps.map(r=>r.velPico);
-  const maxIdx = metricaVel.indexOf(Math.max(...metricaVel));
-  const minIdx = metricaVel.indexOf(Math.min(...metricaVel));
-
-  const unidadVel = calibPxPorCm ? 'cm/s' : 'px/s (relativo, sin calibrar)';
-  const label1 = plane==='sagital' ? 'Rodilla' : 'Rotación hombros';
-  const label2 = plane==='sagital' ? 'Cadera' : 'Rotación cadera';
-
-  tabla.querySelector('thead').innerHTML = `<tr><th>Rep</th><th>${label1} inicio</th><th>${label1} medio</th><th>${label1} final</th><th>${label2} inicio</th><th>Duración</th><th>Vel. pico</th>${carga?'<th>Pot. pico</th>':''}</tr>`;
-  tabla.querySelector('tbody').innerHTML = reps.map(r=>`
-    <tr class="${r===peorTecnica&&reps.length>1?'peor':''}">
-      <td>${r.n}</td><td>${r.inicio.toFixed(0)}°</td><td>${r.medio.toFixed(0)}°</td><td>${r.final.toFixed(0)}°</td>
-      <td>${r.secInicio.toFixed(0)}°</td><td>${r.dur.toFixed(2)}s</td><td>${r.velPico.toFixed(1)}</td>
-      ${carga?`<td>${r.potPico.toFixed(1)} W</td>`:''}
-    </tr>`).join('');
-
-  resumenEl.innerHTML = `
-    <p>Se detectaron <strong>${reps.length}</strong> repeticiones. Unidad de velocidad: ${unidadVel}.</p>
-    <p>${carga?'Potencia':'Velocidad'} máxima: <strong>${(carga?reps[maxIdx].potPico.toFixed(1)+' W':reps[maxIdx].velPico.toFixed(1)+' '+unidadVel)}</strong> en la repetición ${reps[maxIdx].n}.</p>
-    <p>${carga?'Potencia':'Velocidad'} mínima: <strong>${(carga?reps[minIdx].potPico.toFixed(1)+' W':reps[minIdx].velPico.toFixed(1)+' '+unidadVel)}</strong> en la repetición ${reps[minIdx].n}.</p>
-    ${reps.length>1?`<p>Mayor pérdida de técnica detectada en la repetición <strong>${peorTecnica.n}</strong> (comparando el ángulo de inicio/final contra la primera repetición, desviación de ${peorTecnica.desvTecnica.toFixed(0)}°).</p>`:''}
-    ${carga?'':'<p>Cargá una carga en kg arriba para ver la potencia estimada en Watts.</p>'}
-  `;
-  resultados.style.display='block';
+  const total=reps.length;reps=reps.slice(0,5);reps.forEach((r,i)=>r.n=i+1);
+  $('resultados').style.display='block';
+  const T=$('tablaReps');
+  if(!reps.length){T.querySelector('thead').innerHTML='';T.querySelector('tbody').innerHTML='';$('kpis').innerHTML='';
+    nt.innerHTML='<span class="warn">No se detectaron repeticiones completas. Probá con un video de costado, cuerpo entero y movimiento amplio.</span>';$('guardarBtn').style.display='none';return;}
+  const best=reps.reduce((a,b)=>b.v>a.v?b:a),worst=reps.reduce((a,b)=>b.v<a.v?b:a);
+  const perdida=best.v>0?(best.v-worst.v)/best.v*100:0;
+  last={ejercicio:ejNombre(),peso,carga,altura:alt,reps,
+    res:{vMax:best.v,repMejor:best.n,vMin:worst.v,repPeor:worst.n,pMax:best.p,pMin:worst.p,perdida}};
+  $('kpis').innerHTML=`
+    <div class="kpi"><div class="k">Velocidad máx. (mejor rep)</div><div class="v">${f1(best.v)} m/s</div><div class="d">Repetición ${best.n}</div></div>
+    <div class="kpi"><div class="k">Velocidad mín. (peor rep)</div><div class="v">${f1(worst.v)} m/s</div><div class="d">Repetición ${worst.n}</div></div>
+    <div class="kpi"><div class="k">Potencia máx. (mejor rep)</div><div class="v">${best.p.toFixed(0)} W</div><div class="d">Repetición ${best.n}</div></div>
+    <div class="kpi"><div class="k">Potencia mín. (peor rep)</div><div class="v">${worst.p.toFixed(0)} W</div><div class="d">Repetición ${worst.n}</div></div>`;
+  const rgTxt=r=>r[0].toFixed(0)+'° – '+r[1].toFixed(0)+'°';
+  T.querySelector('thead').innerHTML=`<tr><th>Rep</th><th>${JN[j1]}</th><th>${JN[j2]}</th><th>Vel. pico</th><th>Pot. pico</th></tr>`;
+  T.querySelector('tbody').innerHTML=reps.map(r=>`<tr class="${r===best?'best':''}"><td>${r.n}</td><td>${rgTxt(r.ang[j1])}</td><td>${rgTxt(r.ang[j2])}</td><td>${f1(r.v)} m/s</td><td>${r.p.toFixed(0)} W</td></tr>`).join('');
+  let msg=`Pérdida de velocidad entre la mejor y la peor repetición: ${perdida.toFixed(0)}%. Velocidad medida sobre el ${def.p==='cad'?'punto de la cadera':'punto cervical'}; potencia estimada = (peso corporal + carga) × 9,81 × velocidad pico.`;
+  if(total>5)msg+=` Se detectaron ${total} repeticiones; se analizaron las primeras 5.`;
+  if(total<3)msg+=` <span class="warn">Solo se detectaron ${total}; para comparar mejor lo ideal son 3 a 5.</span>`;
+  nt.innerHTML=msg;$('guardarBtn').style.display='inline-block';
 }
+
+/* ---- guardado por carpeta de ejercicio y por día ---- */
+$('guardarBtn').onclick=()=>{
+  if(!last)return;
+  const ok=store.add({id:'t'+Date.now(),fecha:new Date().toISOString(),...last});
+  $('status').textContent=ok?'Guardado en la carpeta “'+last.ejercicio+'”.':'No se pudo guardar.';
+  renderCarpetas();
+};
+function renderCarpetas(){
+  const l=store.list().slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)),g={};
+  l.forEach(t=>(g[t.ejercicio]=g[t.ejercicio]||[]).push(t));
+  const names=Object.keys(g).sort();
+  $('carpetas').innerHTML=names.length?names.map(n=>{
+    let dia='';
+    const items=g[n].map(t=>{
+      const d=new Date(t.fecha),ds=d.toLocaleDateString('es-AR'),h=d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+      const head=ds!==dia?`<div class="day">${ds}</div>`:'';dia=ds;const r=t.res;
+      return head+`<div class="ent">${h} · carga ${t.carga} kg · ${t.reps.length} reps<br>
+        Vel. máx ${f1(r.vMax)} m/s (rep ${r.repMejor}) · mín ${f1(r.vMin)} m/s (rep ${r.repPeor})<br>
+        Pot. máx ${r.pMax.toFixed(0)} W · mín ${r.pMin.toFixed(0)} W<br>
+        <button class="x" data-del="${t.id}">Eliminar</button></div>`;
+    }).join('');
+    return `<details class="fold"><summary>📁 ${n} (${g[n].length})</summary>${items}</details>`;
+  }).join(''):'<p class="note">Todavía no hay tests guardados.</p>';
+}
+$('carpetas').addEventListener('click',e=>{
+  const id=e.target.getAttribute&&e.target.getAttribute('data-del');
+  if(id&&confirm('¿Eliminar este test?')){store.del(id);renderCarpetas();}
+});
+renderCarpetas();
 <\/script>
 </body>
 </html>
-
 </script>
 <script>
 (function(){
@@ -719,6 +722,14 @@ function save(){
 var UI={role:null,tab:'plan',sel:null,week:CUR_WEEK,day:0,exId:null,metric:'kg'};
 var cl=function(id){return S.clients.filter(function(c){return c.id===id;})[0]||S.clients[0];};
 var cur=function(){return UI.role==='alumno'?cl(CURRENT_UID):cl(UI.sel);};
+/* puente para la pestaña Test: guarda los tests dentro de la ficha del alumno */
+function numF(v){var n=parseFloat(String(v==null?'':v).replace(',','.'));return isFinite(n)?n:null;}
+window.testBridge={
+  info:function(){var c=cur();if(!c)return null;var f=c.ficha||{};return {name:c.name,height:numF(f.altura)||c.height||null,weight:numF(f.peso)};},
+  list:function(){var c=cur();return (c&&c.tests)||[];},
+  add:function(r){var c=cur();if(!c)return false;c.tests=c.tests||[];c.tests.push(r);save();return true;},
+  del:function(id){var c=cur();if(!c)return false;c.tests=(c.tests||[]).filter(function(t){return t.id!==id;});save();return true;}
+};
 
 function filled(c,w,d,e){var a=c.loads[key(w,d,e.id)]||[];var n=0;for(var r=0;r<e.rounds;r++){if(num(a[r]))n++;}return n;}
 function migratePlan(c){
