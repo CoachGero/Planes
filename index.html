@@ -167,6 +167,8 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
 .sheet p{color:var(--muted);margin-bottom:14px;}
 .sheet .btn{width:100%;margin-top:8px;}
 .vid{aspect-ratio:16/9;background:#080808;border:1px solid var(--line);border-radius:6px;display:grid;place-items:center;margin-bottom:14px;color:var(--muted);text-align:center;padding:12px;font-size:13px;}
+.vid.on{display:block;padding:0;overflow:hidden;background:#000;}
+.vid iframe,.vid video{display:block;width:100%;height:100%;border:0;background:#000;object-fit:contain;}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(74px + env(safe-area-inset-bottom,0px));background:#fff;color:#000;padding:10px 16px;border-radius:999px;font-weight:600;font-size:13px;z-index:50;max-width:90%;text-align:center;}
 .toast[hidden]{display:none;}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important;}}
@@ -585,7 +587,23 @@ var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){r
 var num=function(s){var n=parseFloat(String(s==null?'':s).replace(',','.'));return isFinite(n)&&n>0?n:null;};
 var fmtN=function(v,d){d=d==null?1:d;var p=Math.pow(10,d);return String(Math.round(v*p)/p).replace('.',',');};
 var roundTo=function(x,s){return Math.max(s,Math.round(x/s)*s);};
-var safeUrl=function(u){u=String(u||'').trim();return /^https?:\/\/\S+$/i.test(u)?u:'';};
+var embedVideo=function(u){
+  var m;
+  var fr=function(src,extra){return '<div class="vid on"'+(extra||'')+'><iframe src="'+esc(src)+'" title="Video del ejercicio" allow="autoplay; encrypted-media; picture-in-picture; fullscreen; clipboard-write" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>';};
+  var vd=function(src){return '<div class="vid on"><video src="'+esc(src)+'" controls autoplay playsinline preload="metadata"></video></div>';};
+  if((m=u.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|shorts\/|embed\/|live\/|v\/)|youtu\.be\/)([\w-]{11})/i)))return fr('https://www.youtube-nocookie.com/embed/'+m[1]+'?autoplay=1&playsinline=1&rel=0');
+  if((m=u.match(/vimeo\.com\/(?:video\/|channels\/[\w-]+\/|groups\/[\w-]+\/videos\/)?(\d+)/i)))return fr('https://player.vimeo.com/video/'+m[1]+'?autoplay=1');
+  if((m=u.match(/drive\.google\.com\/file\/d\/([\w-]+)/i))||(m=u.match(/drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([\w-]+)/i)))return fr('https://drive.google.com/file/d/'+m[1]+'/preview');
+  if((m=u.match(/instagram\.com\/(p|reel|reels|tv)\/([\w-]+)/i)))return fr('https://www.instagram.com/'+(m[1]==='reels'?'reel':m[1])+'/'+m[2]+'/embed','');
+  if((m=u.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/i)))return fr('https://www.tiktok.com/embed/v2/'+m[1]);
+  if((m=u.match(/loom\.com\/(?:share|embed)\/([\w]+)/i)))return fr('https://www.loom.com/embed/'+m[1]);
+  if((m=u.match(/streamable\.com\/(?:e\/)?(\w+)$/i)))return fr('https://streamable.com/e/'+m[1]);
+  if(/facebook\.com\/|fb\.watch\//i.test(u))return fr('https://www.facebook.com/plugins/video.php?show_text=false&href='+encodeURIComponent(u));
+  if(/\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i.test(u))return vd(/dropbox\.com/i.test(u)?u.replace(/[?&]dl=0/i,'').replace(/[?&]raw=1/i,'')+(u.indexOf('?')>-1&&!/dl=0/i.test(u)?'':'?raw=1'):u);
+  /* plan B: intenta mostrarlo dentro de la app; si el sitio no lo permite, queda el botón para abrirlo afuera */
+  return fr(u)+'<p>Si el video no se ve acá, tocá “Abrir en otra pestaña”.</p>';
+};
+var safeUrl=function(u){u=String(u||'').trim();if(/^(www\.|[\w-]+\.(com|be|tv|me|io|ar)\/)/i.test(u))u='https://'+u;return /^https?:\/\/\S+$/i.test(u)?u:'';};
 var key=function(w,d,id){return w+'|'+d+'|'+id;};
 
 var MAX_SESSIONS=5;
@@ -1101,9 +1119,10 @@ document.addEventListener('click',function(ev){
   else if(a==='video'){
     var f=findEx(c,t.getAttribute('data-ex'),UI.day);if(!f)return;
     var u=safeUrl(f.ex.video);
-    openSheet('<h2>'+esc(f.ex.name)+'</h2><div class="vid">'+(u?'Video cargado por tu entrenador':'Acá se ve el video explicativo del ejercicio')+'</div>'+
+    var emb=u?embedVideo(u):'';
+    openSheet('<h2>'+esc(f.ex.name)+'</h2>'+(emb||'<div class="vid">'+(u?'Video cargado por tu entrenador':'Acá se ve el video explicativo del ejercicio')+'</div>')+
       (f.ex.cue?'<p>'+esc(f.ex.cue)+'</p>':'')+
-      (u?'<a class="btn" href="'+esc(u)+'" target="_blank" rel="noopener">Abrir video</a>':'<p>'+(UI.role==='trainer'?'Todavía no cargaste el video. Pegá el link en la pestaña Plan.':'Tu entrenador todavía no cargó el video de este ejercicio.')+'</p>')+
+      (u?'<a class="btn'+(emb?' ghost':'')+'" href="'+esc(u)+'" target="_blank" rel="noopener">'+(emb?'Abrir en otra pestaña':'Abrir video')+'</a>':'<p>'+(UI.role==='trainer'?'Todavía no cargaste el video. Pegá el link en la pestaña Plan.':'Tu entrenador todavía no cargó el video de este ejercicio.')+'</p>')+
       '<button type="button" class="btn ghost" data-act="close">Cerrar</button>');
   }
   else if(a==='add-session'){
