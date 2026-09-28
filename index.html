@@ -260,8 +260,18 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
 <div class="box">
   <label class="f">Ejercicio
     <select id="ejSel"></select></label>
-  <label class="f" id="ejOtroW" style="display:none">Nombre del ejercicio
-    <input type="text" id="ejOtro" placeholder="ej: Prensa"></label>
+  <div class="note" id="ejInfo" style="margin:-4px 0 10px"></div>
+  <div id="ejOtroW" style="display:none">
+    <label class="f">Nombre del ejercicio<input type="text" id="ejOtro" placeholder="ej: Prensa de hombros"></label>
+    <div class="g3">
+      <label class="f">Articulación 1<select id="oj1"></select></label>
+      <label class="f">Articulación 2<select id="oj2"></select></label>
+      <label class="f">Esfuerzo<select id="od"><option value="ext">Extensión (el ángulo sube)</option><option value="flex">Flexión (el ángulo baja)</option></select></label>
+    </div>
+    <label class="f">Punto que se sigue para la velocidad<select id="op"><option value="cerv">Cervical (el cuerpo se mueve)</option><option value="cad">Cadera</option><option value="mun">Muñeca (barra o mancuerna)</option><option value="pie">Tobillo (máquina de piernas)</option></select></label>
+  </div>
+  <label class="f">Referencia de la cabeza
+    <select id="cabSel"><option value="nuca">Nuca</option><option value="frente">Frente</option></select></label>
   <div class="g3">
     <label class="f">Peso corporal (kg)<input type="number" inputmode="decimal" id="pesoC"></label>
     <label class="f">Carga (kg)<input type="number" inputmode="decimal" id="carga"></label>
@@ -297,19 +307,71 @@ import { FilesetResolver, PoseLandmarker } from "https://cdn.jsdelivr.net/npm/@m
 const $=id=>document.getElementById(id);
 const video=$('video'),canvas=$('overlay'),ctx=canvas.getContext('2d');
 
-/* ---- ejercicios: articulaciones dominantes y punto que se sigue para la velocidad ---- */
-const EJ={
-  'Sentadilla':{j:['rodilla','cadera'],p:'cerv'},
-  'Peso muerto':{j:['cadera','tronco'],p:'cerv'},
-  'Zancada':{j:['rodilla','cadera'],p:'cerv'},
-  'Hip thrust':{j:['cadera','rodilla'],p:'cad'},
-  'Otro':{j:['rodilla','cadera'],p:'cerv'}
+/* ---- ejercicios: articulaciones dominantes (j), punto que se sigue (p), fase de esfuerzo (d) y masa para la potencia (m) ---- */
+const X=(j,p,d,m)=>({j,p,d,m});
+const GR={
+ 'Piernas':{
+  'Sentadilla trasera':X(['rodilla','cadera'],'cerv','ext','sis'),
+  'Sentadilla frontal':X(['rodilla','cadera'],'cerv','ext','sis'),
+  'Sentadilla búlgara':X(['rodilla','cadera'],'cerv','ext','sis'),
+  'Zancada / desplante':X(['rodilla','cadera'],'cerv','ext','sis'),
+  'Prensa de piernas':X(['rodilla','cadera'],'pie','ext','carga'),
+  'Extensión de cuádriceps':X(['rodilla','cadera'],'pie','ext','carga'),
+  'Curl femoral':X(['rodilla','cadera'],'pie','flex','carga'),
+  'Peso muerto convencional':X(['cadera','tronco'],'mun','ext','carga'),
+  'Peso muerto rumano':X(['cadera','tronco'],'mun','ext','carga'),
+  'Hip thrust':X(['cadera','rodilla'],'cad','ext','carga'),
+  'Elevación de talones':X(['tobillo','rodilla'],'cerv','ext','sis')},
+ 'Espalda':{
+  'Dominadas':X(['codo','hombro'],'cerv','flex','sis'),
+  'Jalón al pecho':X(['codo','hombro'],'mun','flex','carga'),
+  'Remo con barra':X(['codo','tronco'],'mun','flex','carga'),
+  'Remo con mancuerna':X(['codo','hombro'],'mun','flex','carga'),
+  'Remo en polea':X(['codo','hombro'],'mun','flex','carga')},
+ 'Pecho':{
+  'Press banca plano':X(['codo','hombro'],'mun','ext','carga'),
+  'Press banca inclinado':X(['codo','hombro'],'mun','ext','carga'),
+  'Press con mancuernas':X(['codo','hombro'],'mun','ext','carga'),
+  'Fondos en paralelas':X(['codo','hombro'],'cerv','ext','sis'),
+  'Flexiones de brazos':X(['codo','hombro'],'cerv','ext','sis')},
+ 'Hombros':{
+  'Press militar':X(['codo','hombro'],'mun','ext','carga'),
+  'Press con mancuernas sentado':X(['codo','hombro'],'mun','ext','carga'),
+  'Elevaciones laterales':X(['hombro','codo'],'mun','ext','carga'),
+  'Elevaciones frontales':X(['hombro','codo'],'mun','ext','carga')},
+ 'Brazos':{
+  'Curl de bíceps con barra':X(['codo','hombro'],'mun','flex','carga'),
+  'Curl martillo':X(['codo','hombro'],'mun','flex','carga'),
+  'Extensión de tríceps en polea':X(['codo','hombro'],'mun','ext','carga'),
+  'Press francés':X(['codo','hombro'],'mun','ext','carga')},
+ 'Derivados olímpicos':{
+  'Clean (cargada)':X(['cadera','rodilla'],'mun','ext','carga'),
+  'Power clean':X(['cadera','rodilla'],'mun','ext','carga'),
+  'Hang clean':X(['cadera','rodilla'],'mun','ext','carga'),
+  'Snatch (arranque)':X(['cadera','rodilla'],'mun','ext','carga'),
+  'Power snatch':X(['cadera','rodilla'],'mun','ext','carga'),
+  'Push press':X(['rodilla','codo'],'mun','ext','carga'),
+  'Push jerk':X(['rodilla','codo'],'mun','ext','carga'),
+  'Thruster':X(['rodilla','codo'],'mun','ext','carga'),
+  'Kettlebell swing':X(['cadera','rodilla'],'mun','ext','carga')}
 };
-const JN={rodilla:'Rodilla',cadera:'Cadera',tronco:'Tronco (inclinación)',cuello:'Cuello'};
-$('ejSel').innerHTML=Object.keys(EJ).map(k=>`<option>${k}</option>`).join('');
-const ejNombre=()=>$('ejSel').value==='Otro'?($('ejOtro').value.trim()||'Otro'):$('ejSel').value;
-const ejDef=()=>EJ[$('ejSel').value];
-$('ejSel').onchange=()=>{$('ejOtroW').style.display=$('ejSel').value==='Otro'?'block':'none';buildStats();clearAll();};
+const EJ={};Object.values(GR).forEach(g=>Object.assign(EJ,g));
+const JN={rodilla:'Rodilla',cadera:'Cadera',tronco:'Tronco (inclinación)',cuello:'Cuello',codo:'Codo',hombro:'Hombro',tobillo:'Tobillo'};
+const PN={cerv:'punto cervical',cad:'cadera',mun:'muñeca (barra o mancuerna)',pie:'tobillo'};
+$('ejSel').innerHTML=Object.entries(GR).map(([g,o])=>`<optgroup label="${g}">${Object.keys(o).map(k=>`<option>${k}</option>`).join('')}</optgroup>`).join('')+'<optgroup label="Otro"><option>Otro (personalizado)</option></optgroup>';
+const jopts=Object.entries(JN).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+$('oj1').innerHTML=jopts;$('oj2').innerHTML=jopts;$('oj2').value='cadera';
+const esOtro=()=>$('ejSel').value.startsWith('Otro');
+const ejNombre=()=>esOtro()?($('ejOtro').value.trim()||'Otro'):$('ejSel').value;
+const ejDef=()=>esOtro()?{j:[$('oj1').value,$('oj2').value],p:$('op').value,d:$('od').value,m:($('op').value==='cerv'||$('op').value==='cad')?'sis':'carga'}:EJ[$('ejSel').value];
+const usaBrazo=()=>{const d=ejDef();return d.p==='mun'||d.j.some(k=>k==='codo'||k==='hombro');};
+function refresh(){
+  $('ejOtroW').style.display=esOtro()?'block':'none';
+  const d=ejDef();
+  $('ejInfo').textContent='Dominancia: '+d.j.map(k=>JN[k]).join(' y ')+' · esfuerzo en '+(d.d==='flex'?'flexión':'extensión')+' · velocidad medida en '+PN[d.p];
+  buildStats();clearAll();
+}
+['ejSel','oj1','oj2','od','op'].forEach(id=>$(id).onchange=refresh);
 
 /* ---- almacenamiento: Firestore del index (via puente) o, si se abre solo, localStorage ---- */
 const B=(()=>{try{return window.parent&&window.parent!==window&&window.parent.testBridge||null;}catch(e){return null;}})();
@@ -337,9 +399,9 @@ let poseLandmarker=null,running=false,dataLog=[],last=null;
 function buildStats(){
   $('statsBox').innerHTML=ejDef().j.map(k=>`<div class="stat"><div class="k">${JN[k]}</div><div class="v" id="v-${k}">--</div></div>`).join('');
 }
-buildStats();
 function clearAll(){dataLog=[];last=null;$('resultados').style.display='none';ejDef().j.forEach(k=>{const e=$('v-'+k);if(e)e.textContent='--';});}
 $('resetBtn').onclick=clearAll;
+refresh();
 
 async function setup(){
   $('status').textContent='Descargando modelo de detección de pose (solo la primera vez)...';
@@ -369,18 +431,30 @@ function loop(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(res.landmarks&&res.landmarks.length){
     const lm=res.landmarks[0],W=canvas.width,H=canvas.height;
-    const vis=(a,b,c)=>((lm[a].visibility||0)+(lm[b].visibility||0)+(lm[c].visibility||0));
-    const der=vis(24,26,28)>=vis(23,25,27); // lado más visible
-    const [ih,ik,ia,ifo]=der?[24,26,28,32]:[23,25,27,31];
+    const V=i=>lm[i].visibility||0;
+    const R=[12,14,16,24,26,28],L=[11,13,15,23,25,27];
+    const der=R.reduce((t,i)=>t+V(i),0)>=L.reduce((t,i)=>t+V(i),0); // lado más visible
+    const [ish,iel,iwr,ih,ik,ia,ifo,iey,iea]=der?[12,14,16,24,26,28,32,5,8]:[11,13,15,23,25,27,31,2,7];
     const P=i=>[lm[i].x*W,lm[i].y*H];
-    const cabeza=P(0),cerv=[(P(11)[0]+P(12)[0])/2,(P(11)[1]+P(12)[1])/2],cad=P(ih),rod=P(ik),tob=P(ia),pie=P(ifo);
+    const nariz=P(0),ojo=P(iey),oreja=P(iea),hom=P(ish),cod=P(iel),mun=P(iwr);
+    const cerv=[(P(11)[0]+P(12)[0])/2,(P(11)[1]+P(12)[1])/2],cad=P(ih),rod=P(ik),tob=P(ia),pie=P(ifo);
+    // MediaPipe no marca frente ni nuca: se estiman a partir de nariz, ojo y oreja
+    const frente=[ojo[0]+(ojo[0]-nariz[0])*0.6,ojo[1]+(ojo[1]-nariz[1])*0.6];
+    const nuca=[oreja[0]+(oreja[0]-nariz[0])*0.3+(cerv[0]-oreja[0])*0.3,oreja[1]+(oreja[1]-nariz[1])*0.3+(cerv[1]-oreja[1])*0.3];
+    const cabeza=$('cabSel').value==='frente'?frente:nuca;
+    const brazo=usaBrazo();
     ctx.strokeStyle='#f5f5f5';ctx.lineWidth=2;ctx.beginPath();
-    [cabeza,cerv,cad,rod,tob,pie].forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();
+    [cabeza,cerv,cad,rod,tob,pie].forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));
+    if(brazo){ctx.moveTo(cerv[0],cerv[1]);ctx.lineTo(hom[0],hom[1]);ctx.lineTo(cod[0],cod[1]);ctx.lineTo(mun[0],mun[1]);}
+    ctx.stroke();
     ctx.fillStyle='#ff4d52';
-    [[cabeza,7],[cerv,5],[cad,5],[rod,5],[tob,4],[pie,4]].forEach(([p,r])=>{ctx.beginPath();ctx.arc(p[0],p[1],r,0,7);ctx.fill();});
-    const a={rodilla:ang3(cad,rod,tob),cadera:ang3(cerv,cad,rod),tronco:vert(cad,cerv),cuello:ang3(cabeza,cerv,cad)};
+    [[cabeza,7],[cerv,5],[cad,5],[rod,5],[tob,4],[pie,4]].concat(brazo?[[hom,4],[cod,4],[mun,4]]:[]).forEach(([q,r])=>{ctx.beginPath();ctx.arc(q[0],q[1],r,0,7);ctx.fill();});
+    const a={rodilla:ang3(cad,rod,tob),cadera:ang3(cerv,cad,rod),tronco:vert(cad,cerv),cuello:ang3(cabeza,cerv,cad),codo:ang3(hom,cod,mun),hombro:ang3(cad,hom,cod),tobillo:ang3(rod,tob,pie)};
     ejDef().j.forEach(k=>{const e=$('v-'+k);if(e)e.textContent=a[k].toFixed(0)+'°';});
-    dataLog.push({t:video.currentTime,a,yc:cerv[1],yh:cad[1],span:tob[1]-cabeza[1]});
+    const pp={cerv,cad,mun,pie}[ejDef().p];
+    // largo de la cadena nariz-cervical-cadera-rodilla-tobillo: no cambia con la postura (≈90% de la estatura)
+    const chain=Math.hypot(nariz[0]-cerv[0],nariz[1]-cerv[1])+Math.hypot(cerv[0]-cad[0],cerv[1]-cad[1])+Math.hypot(cad[0]-rod[0],cad[1]-rod[1])+Math.hypot(rod[0]-tob[0],rod[1]-tob[1]);
+    dataLog.push({t:video.currentTime,a,pp,span:chain});
   }
   requestAnimationFrame(loop);
 }
@@ -397,6 +471,11 @@ function extremos(v,t,prom){
     if(l&&Math.abs(s[i]-l.v)<prom)continue;
     o.push({i,t:t[i],v:s[i],tp});
   }
+  // si el video termina en pleno movimiento (ej. justo al terminar la extensión), el último tramo también cuenta
+  const l=o[o.length-1],z=s.length-1;
+  if(l&&z>l.i&&((l.tp==='min'&&s[z]-l.v>=prom)||(l.tp==='max'&&l.v-s[z]>=prom)))o.push({i:z,t:t[z],v:s[z],tp:l.tp==='min'?'max':'min'});
+  const f0=o[0];
+  if(f0&&f0.i>0&&((f0.tp==='min'&&s[0]-f0.v>=prom)||(f0.tp==='max'&&f0.v-s[0]>=prom)))o.unshift({i:0,t:t[0],v:s[0],tp:f0.tp==='min'?'max':'min'});
   return o;
 }
 const f1=(x,d=2)=>x==null?'--':x.toFixed(d);
@@ -408,19 +487,21 @@ function analizar(){
   if(!peso||!alt){$('resultados').style.display='block';$('kpis').innerHTML='';$('tablaReps').querySelector('thead').innerHTML='';$('tablaReps').querySelector('tbody').innerHTML='';
     nt.innerHTML='<span class="warn">Completá peso corporal y altura del alumno para calcular velocidad y potencia, y volvé a tocar “Analizar”.</span>';$('guardarBtn').style.display='none';return;}
   const def=ejDef(),[j1,j2]=def.j,t=dataLog.map(d=>d.t);
-  // escala px→cm usando la altura (nariz a tobillo ≈ 88% de la estatura), tomando el cuadro más erguido
+  // escala px→cm: la cadena nariz-cervical-cadera-rodilla-tobillo mide ≈ 90% de la estatura (se toma el cuadro más extendido)
   const span=Math.max(...suav(dataLog.map(d=>d.span)));
-  const pxCm=span/(alt*0.88);
+  const pxCm=span/(alt*0.90);
   const ext=extremos(dataLog.map(d=>d.a[j1]),t,15);
-  const ys=suav(dataLog.map(d=>def.p==='cad'?d.yh:d.yc));
-  const vy=ys.map((_,i)=>{const a=Math.max(0,i-1),b=Math.min(ys.length-1,i+1);return b>a?-(ys[b]-ys[a])/(t[b]-t[a])/pxCm/100:0;}); // m/s hacia arriba
+  const xs=suav(dataLog.map(d=>d.pp[0])),ys=suav(dataLog.map(d=>d.pp[1]));
+  const vy=xs.map((_,i)=>{const a=Math.max(0,i-1),b=Math.min(xs.length-1,i+1);return b>a?Math.hypot(xs[b]-xs[a],ys[b]-ys[a])/(t[b]-t[a])/pxCm/100:0;}); // m/s (velocidad del punto seguido)
+  const masa=def.m==='sis'?peso+carga:carga;
+  const A=def.d==='flex'?'max':'min',Bt=def.d==='flex'?'min':'max'; // la fase concéntrica va de A a Bt
   let reps=[];
   ext.forEach((e,j)=>{
-    const nx=ext[j+1];if(e.tp!=='min'||!nx||nx.tp!=='max')return;
+    const nx=ext[j+1];if(e.tp!==A||!nx||nx.tp!==Bt)return;
     const pv=ext[j-1],ini=pv?pv.i:0,fin=nx.i;
     let vp=0;for(let k=e.i;k<=fin;k++)if(vy[k]>vp)vp=vy[k];
     const rg=k=>{const v=dataLog.slice(ini,fin+1).map(d=>d.a[k]);return[Math.min(...v),Math.max(...v)];};
-    reps.push({ang:{[j1]:rg(j1),[j2]:rg(j2)},v:vp,p:(peso+carga)*9.81*vp});
+    reps.push({ang:{[j1]:rg(j1),[j2]:rg(j2)},v:vp,p:masa*9.81*vp});
   });
   const total=reps.length;reps=reps.slice(0,5);reps.forEach((r,i)=>r.n=i+1);
   $('resultados').style.display='block';
@@ -439,7 +520,8 @@ function analizar(){
   const rgTxt=r=>r[0].toFixed(0)+'° – '+r[1].toFixed(0)+'°';
   T.querySelector('thead').innerHTML=`<tr><th>Rep</th><th>${JN[j1]}</th><th>${JN[j2]}</th><th>Vel. pico</th><th>Pot. pico</th></tr>`;
   T.querySelector('tbody').innerHTML=reps.map(r=>`<tr class="${r===best?'best':''}"><td>${r.n}</td><td>${rgTxt(r.ang[j1])}</td><td>${rgTxt(r.ang[j2])}</td><td>${f1(r.v)} m/s</td><td>${r.p.toFixed(0)} W</td></tr>`).join('');
-  let msg=`Pérdida de velocidad entre la mejor y la peor repetición: ${perdida.toFixed(0)}%. Velocidad medida sobre el ${def.p==='cad'?'punto de la cadera':'punto cervical'}; potencia estimada = (peso corporal + carga) × 9,81 × velocidad pico.`;
+  let msg=`Pérdida de velocidad entre la mejor y la peor repetición: ${perdida.toFixed(0)}%. Velocidad medida sobre: ${PN[def.p]}. Potencia estimada = ${def.m==='sis'?'(peso corporal + carga)':'carga'} × 9,81 × velocidad pico.`;
+  if(masa<=0)msg+=' <span class="warn">Cargá el peso de la carga para estimar la potencia.</span>';
   if(total>5)msg+=` Se detectaron ${total} repeticiones; se analizaron las primeras 5.`;
   if(total<3)msg+=` <span class="warn">Solo se detectaron ${total}; para comparar mejor lo ideal son 3 a 5.</span>`;
   nt.innerHTML=msg;$('guardarBtn').style.display='inline-block';
