@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
 <style>
 :root{
   --bg:#000000;
@@ -136,6 +137,13 @@ textarea{min-height:76px;resize:vertical;}
 .memo-v{margin-top:2px;max-height:120px;overflow:auto;line-height:1.4;}
 .memo-v.alert{color:var(--red-text);font-weight:600;}
 .memo-v.empty{color:var(--muted);font-style:italic;}
+.rep{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:12px;margin-top:12px;}
+.rep h4{margin:0 0 6px;font-size:14px;}
+.rep .d{font-size:12px;color:var(--muted);margin-bottom:8px;}
+.rep .up{color:#3ddc84;}
+.rep .down{color:var(--red-text);}
+.rep ul{margin:4px 0 0;padding-left:18px;font-size:12px;}
+.rep li{margin-bottom:4px;}
 .who{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--line);border-radius:4px;padding:8px 8px 8px 12px;margin-top:14px;font-size:13px;}
 .who strong{font-weight:600;}
 
@@ -285,6 +293,7 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
   </div>
   <input type="file" id="fileInput" accept="video/*">
   <div class="status" id="status">Cargando modelo...</div>
+  <div class="note">Mientras se analiza, el video se graba con los ángulos y la fase del movimiento (a media velocidad) y se guarda junto con la medición.</div>
 </div>
 
 <div class="wrap">
@@ -400,12 +409,12 @@ function ang3(a,b,c){
   return Math.acos(Math.max(-1,Math.min(1,d/m)))*180/Math.PI;
 }
 const vert=(a,b)=>Math.abs(Math.atan2(b[0]-a[0],b[1]-a[1]))*180/Math.PI; // 0° = tronco vertical (cervical sobre cadera)
-let poseLandmarker=null,running=false,dataLog=[],last=null;
+let poseLandmarker=null,running=false,dataLog=[],last=null,maxSpan=0,liveReps=0,romLive={};
 
 function buildStats(){
   $('statsBox').innerHTML=ejDef().j.map(k=>`<div class="stat"><div class="k">${JN[k]}</div><div class="v" id="v-${k}">--</div></div>`).join('');
 }
-function clearAll(){dataLog=[];last=null;$('resultados').style.display='none';ejDef().j.forEach(k=>{const e=$('v-'+k);if(e)e.textContent='--';});}
+function clearAll(){dataLog=[];last=null;maxSpan=0;liveReps=0;romLive={};$('resultados').style.display='none';ejDef().j.forEach(k=>{const e=$('v-'+k);if(e)e.textContent='--';});}
 $('resetBtn').onclick=clearAll;
 refresh();
 
@@ -422,16 +431,16 @@ setup().catch(e=>$('status').textContent='Error cargando el modelo: '+e.message)
 $('fileInput').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f||!poseLandmarker)return;
   clearAll();video.src=URL.createObjectURL(f);
-  video.onloadedmetadata=()=>{canvas.width=video.videoWidth;canvas.height=video.videoHeight;video.playbackRate=0.5;video.play();running=true;loop();};
+  video.onloadedmetadata=()=>{canvas.width=video.videoWidth;canvas.height=video.videoHeight;video.playbackRate=0.5;video.play();running=true;startRec();loop();};
 });
-video.addEventListener('ended',analizar);
-$('analizarBtn').addEventListener('click',analizar);
+video.addEventListener('ended',()=>{stopRec();analizar();});
+$('analizarBtn').addEventListener('click',()=>{video.pause();stopRec();analizar();});
 
 /* ---- detección cuadro a cuadro: cabeza, cervical, cadera, rodilla, pie ---- */
 let lastT=-1;
 function loop(){
   if(!running)return;
-  if(video.paused||video.ended||video.currentTime===lastT){requestAnimationFrame(loop);return;}
+  if(video.paused||video.ended||video.currentTime===lastT){if(recCtx&&!video.paused&&!video.ended){recCtx.drawImage(video,0,0,recCanvas.width,recCanvas.height);recCtx.drawImage(canvas,0,0,recCanvas.width,recCanvas.height);}requestAnimationFrame(loop);return;}
   lastT=video.currentTime;
   const res=poseLandmarker.detectForVideo(video,performance.now());
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -461,7 +470,32 @@ function loop(){
     // largo de la cadena nariz-cervical-cadera-rodilla-tobillo: no cambia con la postura (≈90% de la estatura)
     const chain=Math.hypot(nariz[0]-cerv[0],nariz[1]-cerv[1])+Math.hypot(cerv[0]-cad[0],cerv[1]-cad[1])+Math.hypot(cad[0]-rod[0],cad[1]-rod[1])+Math.hypot(rod[0]-tob[0],rod[1]-tob[1]);
     dataLog.push({t:video.currentTime,a,pp,span:chain});
+    // ---- información sobre el video: ángulos de las articulaciones dominantes, fase, repeticiones y velocidad
+    const dd=ejDef(),n=dataLog.length,fs=Math.max(14,Math.round(W/26));
+    maxSpan=Math.max(maxSpan,chain);
+    const posJ={rodilla:rod,cadera:cad,tronco:cerv,cuello:cerv,codo:cod,hombro:hom,tobillo:tob};
+    dd.j.forEach((k,ix)=>{
+      const q=posJ[k],prev=ix?posJ[dd.j[0]]:null,cerca=prev&&Math.hypot(prev[0]-q[0],prev[1]-q[1])<fs*2;
+      etiqueta(a[k].toFixed(0)+'°',q[0]+fs*0.6,q[1]-fs*0.3+(cerca?fs*1.1:0),fs,ix?'#ffd166':'#fff');
+      const r=romLive[k]||(romLive[k]=[a[k],a[k]]);r[0]=Math.min(r[0],a[k]);r[1]=Math.max(r[1],a[k]);
+    });
+    const k0=Math.max(0,n-5),slope=a[dd.j[0]]-dataLog[k0].a[dd.j[0]];
+    const fase=Math.abs(slope)<2?'Pausa':((dd.d==='ext')===(slope>0)?'Concéntrica':'Excéntrica');
+    if(n>10&&n%5===0)liveReps=pares(extremos(dataLog.map(x=>x.a[dd.j[0]]),dataLog.map(x=>x.t),15),dd).length;
+    const alt=parseFloat($('altura').value);let vTxt='';
+    if(alt&&n>=3&&maxSpan>0){const q0=dataLog[n-3],q1=dataLog[n-1],dt=q1.t-q0.t;
+      if(dt>0)vTxt='Vel '+(Math.hypot(q1.pp[0]-q0.pp[0],q1.pp[1]-q0.pp[1])/dt/(maxSpan/(alt*0.9))/100).toFixed(2)+' m/s';}
+    // consideraciones: si el modelo no ve bien la articulación dominante, avisar en vez de mostrar números poco confiables
+    const idxJ={rodilla:ik,cadera:ih,tronco:ih,cuello:0,codo:iel,hombro:ish,tobillo:ia};
+    const visKey=Math.min(V(idxJ[dd.j[0]]),V(idxJ[dd.j[1]]));
+    const romTxt='ROM '+JN[dd.j[0]].split(' ')[0]+': '+romLive[dd.j[0]][0].toFixed(0)+'°–'+romLive[dd.j[0]][1].toFixed(0)+'° ('+(romLive[dd.j[0]][1]-romLive[dd.j[0]][0]).toFixed(0)+'°)';
+    const hfs=Math.round(fs*0.9),lines=[[fase,fase==='Concéntrica'?'#ff4d52':fase==='Excéntrica'?'#f5f5f5':'#a3a3a3'],['Reps: '+liveReps,'#fff'],[romTxt,'#ffd166']];
+    if(vTxt)lines.push([vTxt,'#fff']);
+    if(visKey<0.5)lines.push(['⚠ Se ve poco: acercate o girá la cámara','#ff4d52']);
+    ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(8,8,hfs*8.6,lines.length*hfs*1.25+10);
+    lines.forEach(([tx,col],i)=>{ctx.font='bold '+hfs+'px system-ui,sans-serif';ctx.fillStyle=col;ctx.fillText(tx,16,8+hfs*1.15*(i+1)+2);});
   }
+  if(recCtx){recCtx.drawImage(video,0,0,recCanvas.width,recCanvas.height);recCtx.drawImage(canvas,0,0,recCanvas.width,recCanvas.height);}
   requestAnimationFrame(loop);
 }
 
@@ -484,6 +518,39 @@ function extremos(v,t,prom){
   if(f0&&f0.i>0&&((f0.tp==='min'&&s[0]-f0.v>=prom)||(f0.tp==='max'&&f0.v-s[0]>=prom)))o.unshift({i:0,t:t[0],v:s[0],tp:f0.tp==='min'?'max':'min'});
   return o;
 }
+/* fases: excéntrica (ini→e) y concéntrica (e→nx), según el esfuerzo del ejercicio */
+function pares(ext,d){
+  const A=d.d==='flex'?'max':'min',B=d.d==='flex'?'min':'max',o=[];
+  ext.forEach((e,j)=>{const nx=ext[j+1];if(e.tp===A&&nx&&nx.tp===B)o.push({pv:ext[j-1],e,nx});});
+  return o;
+}
+function etiqueta(txt,x,y,fs,col){
+  ctx.font='bold '+fs+'px system-ui,sans-serif';ctx.lineWidth=Math.max(3,fs/5);ctx.strokeStyle='#000';ctx.lineJoin='round';
+  ctx.strokeText(txt,x,y);ctx.fillStyle=col||'#fff';ctx.fillText(txt,x,y);
+}
+/* grabación del video analizado (video + esqueleto + ángulos + fase) */
+let rec=null,recChunks=[],recBlob=null,recCanvas=null,recCtx=null,recMime='video/webm';
+function startRec(){
+  rec=null;recBlob=null;recChunks=[];recCanvas=null;recCtx=null;
+  try{
+    const mt=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
+    if(!mt||!canvas.captureStream)return;
+    const sc=Math.min(1,480/canvas.width);
+    recCanvas=document.createElement('canvas');recCanvas.width=Math.round(canvas.width*sc);recCanvas.height=Math.round(canvas.height*sc);
+    recCtx=recCanvas.getContext('2d');recMime=mt.split(';')[0];
+    rec=new MediaRecorder(recCanvas.captureStream(30),{mimeType:mt,videoBitsPerSecond:900000});
+    rec.ondataavailable=e=>{if(e.data&&e.data.size)recChunks.push(e.data);};
+    rec.start(1000);
+  }catch(e){rec=null;recCtx=null;}
+}
+function stopRec(){
+  return new Promise(res=>{
+    recCtx=null;
+    if(!rec||rec.state==='inactive'){res(recBlob);return;}
+    rec.onstop=()=>{recBlob=new Blob(recChunks,{type:recMime});res(recBlob);};
+    try{rec.stop();}catch(e){res(recBlob);}
+  });
+}
 const f1=(x,d=2)=>x==null?'--':x.toFixed(d);
 
 function analizar(){
@@ -500,33 +567,36 @@ function analizar(){
   const xs=suav(dataLog.map(d=>d.pp[0])),ys=suav(dataLog.map(d=>d.pp[1]));
   const vy=xs.map((_,i)=>{const a=Math.max(0,i-1),b=Math.min(xs.length-1,i+1);return b>a?Math.hypot(xs[b]-xs[a],ys[b]-ys[a])/(t[b]-t[a])/pxCm/100:0;}); // m/s (velocidad del punto seguido)
   const masa=def.m==='sis'?peso+carga:carga;
-  const A=def.d==='flex'?'max':'min',Bt=def.d==='flex'?'min':'max'; // la fase concéntrica va de A a Bt
   let reps=[];
-  ext.forEach((e,j)=>{
-    const nx=ext[j+1];if(e.tp!==A||!nx||nx.tp!==Bt)return;
-    const pv=ext[j-1],ini=pv?pv.i:0,fin=nx.i;
+  pares(ext,def).forEach(({pv,e,nx})=>{
+    const ini=pv?pv.i:0,fin=nx.i;
     let vp=0;for(let k=e.i;k<=fin;k++)if(vy[k]>vp)vp=vy[k];
     const rg=k=>{const v=dataLog.slice(ini,fin+1).map(d=>d.a[k]);return[Math.min(...v),Math.max(...v)];};
-    reps.push({ang:{[j1]:rg(j1),[j2]:rg(j2)},v:vp,p:masa*9.81*vp});
+    const fa=k=>[dataLog[ini].a[k],dataLog[e.i].a[k],dataLog[fin].a[k]]; // inicio · fin de excéntrica · fin de concéntrica
+    reps.push({ang:{[j1]:rg(j1),[j2]:rg(j2)},fases:{[j1]:fa(j1),[j2]:fa(j2)},tempo:[t[e.i]-t[ini],t[fin]-t[e.i]],v:vp,p:masa*9.81*vp});
   });
   const total=reps.length;reps=reps.slice(0,5);reps.forEach((r,i)=>r.n=i+1);
   $('resultados').style.display='block';
   const T=$('tablaReps');
   if(!reps.length){T.querySelector('thead').innerHTML='';T.querySelector('tbody').innerHTML='';$('kpis').innerHTML='';
     nt.innerHTML='<span class="warn">No se detectaron repeticiones completas. Probá con un video de costado, cuerpo entero y movimiento amplio.</span>';$('guardarBtn').style.display='none';return;}
+  reps.forEach(r=>{r.rom=r.ang[j1][1]-r.ang[j1][0];});
   const best=reps.reduce((a,b)=>b.v>a.v?b:a),worst=reps.reduce((a,b)=>b.v<a.v?b:a);
+  const romMax=reps.reduce((a,b)=>b.rom>a.rom?b:a),romMin=reps.reduce((a,b)=>b.rom<a.rom?b:a);
+  const romProm=reps.reduce((s,r)=>s+r.rom,0)/reps.length;
   const perdida=best.v>0?(best.v-worst.v)/best.v*100:0;
   last={ejercicio:ejNombre(),peso,carga,altura:alt,reps,
-    res:{vMax:best.v,repMejor:best.n,vMin:worst.v,repPeor:worst.n,pMax:best.p,pMin:worst.p,perdida}};
+    res:{vMax:best.v,repMejor:best.n,vMin:worst.v,repPeor:worst.n,pMax:best.p,pMin:worst.p,perdida,romProm,romMax:romMax.rom,romMin:romMin.rom}};
   $('kpis').innerHTML=`
     <div class="kpi"><div class="k">Velocidad máx. (mejor rep)</div><div class="v">${f1(best.v)} m/s</div><div class="d">Repetición ${best.n}</div></div>
     <div class="kpi"><div class="k">Velocidad mín. (peor rep)</div><div class="v">${f1(worst.v)} m/s</div><div class="d">Repetición ${worst.n}</div></div>
     <div class="kpi"><div class="k">Potencia máx. (mejor rep)</div><div class="v">${best.p.toFixed(0)} W</div><div class="d">Repetición ${best.n}</div></div>
-    <div class="kpi"><div class="k">Potencia mín. (peor rep)</div><div class="v">${worst.p.toFixed(0)} W</div><div class="d">Repetición ${worst.n}</div></div>`;
-  const rgTxt=r=>r[0].toFixed(0)+'° – '+r[1].toFixed(0)+'°';
-  T.querySelector('thead').innerHTML=`<tr><th>Rep</th><th>${JN[j1]}</th><th>${JN[j2]}</th><th>Vel. pico</th><th>Pot. pico</th></tr>`;
-  T.querySelector('tbody').innerHTML=reps.map(r=>`<tr class="${r===best?'best':''}"><td>${r.n}</td><td>${rgTxt(r.ang[j1])}</td><td>${rgTxt(r.ang[j2])}</td><td>${f1(r.v)} m/s</td><td>${r.p.toFixed(0)} W</td></tr>`).join('');
-  let msg=`Pérdida de velocidad entre la mejor y la peor repetición: ${perdida.toFixed(0)}%. Velocidad medida sobre: ${PN[def.p]}. Potencia estimada = ${def.m==='sis'?'(peso corporal + carga)':'carga'} × 9,81 × velocidad pico.`;
+    <div class="kpi"><div class="k">Potencia mín. (peor rep)</div><div class="v">${worst.p.toFixed(0)} W</div><div class="d">Repetición ${worst.n}</div></div>
+    <div class="kpi"><div class="k">ROM ${JN[j1]} promedio</div><div class="v">${romProm.toFixed(0)}°</div><div class="d">Máx ${romMax.rom.toFixed(0)}° (rep ${romMax.n}) · mín ${romMin.rom.toFixed(0)}° (rep ${romMin.n})</div></div>`;
+  const faTxt=f=>f.map(x=>x.toFixed(0)+'°').join(' → ');
+  T.querySelector('thead').innerHTML=`<tr><th>Rep</th><th>${JN[j1]} (ROM)</th><th>${JN[j2]}</th><th>Excént. / Concént.</th><th>Vel. pico</th><th>Pot. pico</th></tr>`;
+  T.querySelector('tbody').innerHTML=reps.map(r=>`<tr class="${r===best?'best':''}"><td>${r.n}</td><td>${faTxt(r.fases[j1])} <span style="color:var(--muted)">(${r.rom.toFixed(0)}°)</span></td><td>${faTxt(r.fases[j2])}</td><td>${r.tempo[0]>0?r.tempo[0].toFixed(1)+' s':'--'} / ${r.tempo[1].toFixed(1)} s</td><td>${f1(r.v)} m/s</td><td>${r.p.toFixed(0)} W</td></tr>`).join('');
+  let msg=`Ángulos por repetición: inicio → fin de la fase excéntrica → fin de la concéntrica, con el ROM (rango de movimiento) de ${JN[j1]} entre paréntesis. Pérdida de velocidad entre la mejor y la peor repetición: ${perdida.toFixed(0)}%. Velocidad medida sobre: ${PN[def.p]}. Potencia estimada = ${def.m==='sis'?'(peso corporal + carga)':'carga'} × 9,81 × velocidad pico.`;
   if(masa<=0)msg+=' <span class="warn">Cargá el peso de la carga para estimar la potencia.</span>';
   if(total>5)msg+=` Se detectaron ${total} repeticiones; se analizaron las primeras 5.`;
   if(total<3)msg+=` <span class="warn">Solo se detectaron ${total}; para comparar mejor lo ideal son 3 a 5.</span>`;
@@ -534,10 +604,24 @@ function analizar(){
 }
 
 /* ---- guardado por carpeta de ejercicio y por día ---- */
-$('guardarBtn').onclick=()=>{
+$('guardarBtn').onclick=async()=>{
   if(!last)return;
-  const ok=store.add({id:'t'+Date.now(),fecha:new Date().toISOString(),...last});
-  $('status').textContent=ok?'Guardado en la carpeta “'+last.ejercicio+'”.':'No se pudo guardar.';
+  const btn=$('guardarBtn'),st=$('status');btn.disabled=true;
+  const id='t'+Date.now();let videoUrl=null,aviso='';
+  const blob=await stopRec();
+  if(!B)aviso=' Abierto fuera de la app: el video analizado no se guarda.';
+  if(B&&B.uploadVideo){
+    if(!blob||!blob.size)aviso=' No se grabó el video analizado.';
+    else if(blob.size>40*1024*1024)aviso=' El video pesa más de 40 MB y no se guardó.';
+    else{
+      st.textContent='Subiendo el video analizado...';
+      try{videoUrl=await B.uploadVideo(blob,id);}
+      catch(e){aviso=' El video no se pudo subir ('+((e&&(e.code||e.message))||'error')+'). Revisá que Firebase Storage esté habilitado y sus reglas.';}
+    }
+  }
+  const ok=store.add({id,fecha:new Date().toISOString(),...last,videoUrl:videoUrl||null});
+  st.textContent=(ok?'Medición guardada en la carpeta “'+last.ejercicio+'”'+(videoUrl?' con su video analizado.':'.'):'No se pudo guardar.')+aviso;
+  btn.disabled=false;if(ok)btn.style.display='none';
   renderCarpetas();
 };
 function renderCarpetas(){
@@ -552,12 +636,15 @@ function renderCarpetas(){
       return head+`<div class="ent">${h} · carga ${t.carga} kg · ${t.reps.length} reps<br>
         Vel. máx ${f1(r.vMax)} m/s (rep ${r.repMejor}) · mín ${f1(r.vMin)} m/s (rep ${r.repPeor})<br>
         Pot. máx ${r.pMax.toFixed(0)} W · mín ${r.pMin.toFixed(0)} W<br>
-        <button class="x" data-del="${t.id}">Eliminar</button></div>`;
+        ${r.romProm!=null?'ROM promedio '+r.romProm.toFixed(0)+'°<br>':''}
+        ${t.videoUrl?`<button class="x" data-vid="${String(t.videoUrl).replace(/"/g,'%22')}">▶ Ver video analizado</button> · `:''}<button class="x" data-del="${t.id}">Eliminar</button></div>`;
     }).join('');
     return `<details class="fold"><summary>📁 ${n} (${g[n].length})</summary>${items}</details>`;
   }).join(''):'<p class="note">Todavía no hay tests guardados.</p>';
 }
 $('carpetas').addEventListener('click',e=>{
+  const vu=e.target.getAttribute&&e.target.getAttribute('data-vid');
+  if(vu){const v=document.createElement('video');v.src=vu;v.controls=true;v.autoplay=true;v.playsInline=true;v.style.cssText='width:100%;border-radius:6px;margin:6px 0;display:block';e.target.replaceWith(v);return;}
   const id=e.target.getAttribute&&e.target.getAttribute('data-del');
   if(id&&confirm('¿Eliminar este test?')){store.del(id);renderCarpetas();}
 });
@@ -655,6 +742,8 @@ auth.onAuthStateChanged(function(user){
       arr.forEach(migratePlan);
       S.clients=arr;bumpUidFrom(arr);
       UI.role='trainer';UI.tab='alumnos';UI.sel=arr.length?arr[0].id:null;
+      var hm=/c=([^&]+)/.exec(location.hash),ht=/t=([^&]+)/.exec(location.hash);
+      if(hm&&cl(decodeURIComponent(hm[1]))){UI.sel=decodeURIComponent(hm[1]);UI.tab=ht?decodeURIComponent(ht[1]):'vista';}
       if(UI.sel)UI.day=defaultDay(cl(UI.sel));
       hideAuth();render(true);
     });
@@ -727,7 +816,8 @@ var IC={
   progs:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
   alumnos:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 6a3 3 0 0 1 0 5.5M18 14.5c1.8.8 3 2.6 3 5.5"/>',
   ficha:'<path d="M8 3h8a2 2 0 0 1 2 2v16l-6-3-6 3V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h6"/>',
-  test:'<circle cx="12" cy="5" r="2"/><path d="M12 7v6M12 13l-4 7M12 13l4 7M6 10l6-1 6 1"/>'
+  test:'<circle cx="12" cy="5" r="2"/><path d="M12 7v6M12 13l-4 7M12 13l4 7M6 10l6-1 6 1"/>',
+  vista:'<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="3"/>'
 };
 var icon=function(n){return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+IC[n]+'</svg>';};
 
@@ -834,7 +924,22 @@ window.testBridge={
   info:function(){var c=cur();if(!c)return null;var f=c.ficha||{};return {name:c.name,height:numF(f.altura)||c.height||null,weight:numF(f.peso)};},
   list:function(){var c=cur();return (c&&c.tests)||[];},
   add:function(r){var c=cur();if(!c)return false;c.tests=c.tests||[];c.tests.push(r);save();return true;},
-  del:function(id){var c=cur();if(!c)return false;c.tests=(c.tests||[]).filter(function(t){return t.id!==id;});save();return true;}
+  del:function(id){
+    var c=cur();if(!c)return false;
+    var t=(c.tests||[]).filter(function(x){return x.id===id;})[0];
+    if(t&&t.videoUrl&&firebase.storage){try{firebase.storage().refFromURL(t.videoUrl)["delete"]().catch(function(){});}catch(e){}}
+    c.tests=(c.tests||[]).filter(function(x){return x.id!==id;});save();return true;
+  },
+  /* sube el video analizado a Firebase Storage: tests/<id del alumno>/<id del test>.webm */
+  uploadVideo:function(blob,id){
+    var c=cur();
+    if(!c)return Promise.reject(new Error('sin alumno seleccionado'));
+    if(!firebase.storage)return Promise.reject(new Error('Storage no está cargado'));
+    var st=firebase.storage();st.setMaxUploadRetryTime(45000);st.setMaxOperationRetryTime(15000);
+    var ext=(blob.type||'').indexOf('mp4')>-1?'mp4':'webm';
+    var ref=st.ref('tests/'+c.id+'/'+id+'.'+ext);
+    return ref.put(blob,{contentType:blob.type||('video/'+ext)}).then(function(){return ref.getDownloadURL();});
+  }
 };
 
 function filled(c,w,d,e){var a=c.loads[key(w,d,e.id)]||[];var n=0;for(var r=0;r<e.rounds;r++){if(num(a[r]))n++;}return n;}
@@ -878,6 +983,31 @@ function weekPct(c,w){
   return t?Math.round(f/t*100):0;
 }
 function allEx(c){var out=[];c.plan.forEach(function(blocks,d){blocks.forEach(function(b){(b.exercises||[]).forEach(function(e){out.push({ex:e,d:d,b:b});});});});return out;}
+function avgLoad(c,w,d,e){var arr=c.loads[key(w,d,e.id)]||[],s=0,n=0;for(var r=0;r<e.rounds;r++){if(num(arr[r])){s+=parseFloat(String(arr[r]).replace(',','.'));n++;}}return n?s/n:null;}
+function buildInforme(c){
+  var nw=weeksOf(c),lista=allEx(c),prog=[],obs=[],totC=0,totF=0;
+  lista.forEach(function(it){
+    var e=it.ex,d=it.d,w0=null,w1=null,v0=null,v1=null;
+    for(var w=1;w<=nw;w++){var v=avgLoad(c,w,d,e);if(v!=null){if(w0===null){w0=w;v0=v;}w1=w;v1=v;}}
+    for(var r=0;r<e.rounds;r++){totC++;}
+    for(var w2=1;w2<=nw;w2++){totF+=filled(c,w2,d,e);}
+    if(w0!==null&&w1!==null&&w1>w0)prog.push({nombre:e.name,delta:v1-v0,de:v0,a:v1,semanas:w0+' a '+w1});
+    var nk,nv;for(var w3=1;w3<=nw;w3++){nk=key(w3,d,e.id);nv=(c.notes||{})[nk];if(nv&&nv.trim())obs.push({ex:e.name,semana:w3,texto:nv.trim()});}
+  });
+  totC*=nw;
+  prog.sort(function(a,b){return b.delta-a.delta;});
+  var mejor=prog.length?prog[0]:null,peor=prog.length>1?prog[prog.length-1]:(prog.length===1?prog[0]:null);
+  if(peor===mejor)peor=null;
+  return {fecha:new Date().toISOString(),semanas:nw,cumplimiento:totC?Math.round(totF/totC*100):0,mejor:mejor,peor:peor,progresion:prog,observaciones:obs};
+}
+function informeHtml(inf,titulo){
+  var f1=function(v){return (Math.round(v*10)/10)+' kg';};
+  var h='<div class="rep"><h4>'+esc(titulo||'Cierre de plan')+'</h4><div class="d">'+new Date(inf.fecha).toLocaleDateString('es-AR')+' · '+inf.semanas+' semana'+(inf.semanas===1?'':'s')+' · '+inf.cumplimiento+'% de rondas cargadas</div>';
+  h+=inf.mejor?'<div>Mayor progresión de carga: <strong class="up">'+esc(inf.mejor.nombre)+'</strong> ('+f1(inf.mejor.de)+' → '+f1(inf.mejor.a)+', semanas '+inf.mejor.semanas+')</div>':'<div class="d">Sin datos suficientes para medir progresión.</div>';
+  h+=inf.peor?'<div>Menor progresión'+(inf.peor.delta<0?' (bajó de carga)':'')+': <strong class="'+(inf.peor.delta<0?'down':'')+'">'+esc(inf.peor.nombre)+'</strong> ('+f1(inf.peor.de)+' → '+f1(inf.peor.a)+', semanas '+inf.peor.semanas+')</div>':'';
+  if(inf.observaciones&&inf.observaciones.length)h+='<div style="margin-top:8px">Observaciones del alumno:</div><ul>'+inf.observaciones.map(function(o){return '<li>'+esc(o.ex)+' (semana '+o.semana+'): '+esc(o.texto)+'</li>';}).join('')+'</ul>';
+  return h+'</div>';
+}
 function findEx(c,id,day){
   if(day!=null){
     var blocks=c.plan[day]||[];
@@ -940,12 +1070,15 @@ function lineChart(labels,vals,unit,desc){
 }
 
 /* ---------- pantallas ---------- */
-var TABS_A=[['plan','Entreno'],['prog','Progreso'],['nutri','Nutrición'],['progs','Programas'],['test','Test']];
-var TABS_T=[['alumnos','Alumnos'],['ficha','Ficha'],['plan','Plan'],['prog','Progreso'],['nutri','Nutrición'],['progs','Programas'],['test','Test']];
-var ICON_FOR={plan:'plan',prog:'prog',nutri:'nutri',progs:'progs',alumnos:'alumnos',ficha:'ficha',test:'test'};
+var TABS_A=[['plan','Entreno'],['ficha','Ficha'],['prog','Progreso'],['nutri','Nutrición'],['progs','Programas'],['test','Test']];
+var TABS_T=[['alumnos','Alumnos'],['ficha','Ficha'],['plan','Plan'],['vista','Vista'],['prog','Progreso'],['nutri','Nutrición'],['progs','Programas'],['test','Test']];
+var ICON_FOR={plan:'plan',prog:'prog',nutri:'nutri',progs:'progs',alumnos:'alumnos',ficha:'ficha',test:'test',vista:'vista'};
 
 function clientBar(c){
-  return UI.role==='trainer'?'<div class="who"><span>Alumno: <strong>'+esc(c.name)+'</strong></span><button type="button" class="btn ghost small" data-act="tab" data-v="alumnos">Cambiar</button></div>':'';
+  return UI.role==='trainer'?'<div class="who"><span>Alumno: <strong>'+esc(c.name)+'</strong></span><button type="button" class="btn ghost small" data-act="tab" data-v="alumnos">Cambiar</button><button type="button" class="btn ghost small" data-act="newtab" data-id="'+esc(c.id)+'">Abrir en pestaña nueva</button></div>':'';
+}
+function scrVista(c){
+  return '<h1>Plan de '+esc(c.first)+', como lo ve '+esc(c.first)+'</h1><p class="sub">Cargá los kilos vos mismo mientras entrena. Se guarda igual que si los cargara '+esc(c.first)+'. Podés abrir varios alumnos en pestañas distintas del navegador con el botón de abajo, para tenerlos a la vista al mismo tiempo.</p>'+clientBar(c)+scrTrain(c).replace(/^<h1>[^<]*<\/h1><p class="sub">[^<]*<\/p>/,'');
 }
 function fichaOf(c){
   if(!c.ficha)c.ficha={};
@@ -959,7 +1092,7 @@ function scrFicha(c){
     var tag=area?'<textarea rows="3" data-fedit data-f="'+key+'">'+esc(f[key])+'</textarea>':'<input type="text" data-fedit data-f="'+key+'" value="'+esc(f[key])+'">';
     return '<label class="fld full">'+label+tag+'</label>';
   }
-  return '<h1>Ficha de '+esc(c.first)+'</h1><p class="sub">Datos personales de referencia para armar cada plan: objetivos, lesiones y contexto general.</p>'+clientBar(c)+
+  return '<h1>Ficha de '+esc(c.first)+'</h1><p class="sub">Datos personales de referencia para armar cada plan: objetivos, lesiones y contexto general. '+(UI.role==='alumno'?'La puede editar vos o tu entrenador.':'La pueden editar vos o tu alumno.')+'</p>'+clientBar(c)+
     '<div class="rounds" style="grid-template-columns:repeat(3,minmax(0,1fr))">'+
     '<label class="fld"><span>Edad</span><input type="text" inputmode="numeric" data-fedit data-f="edad" value="'+esc(f.edad)+'"></label>'+
     '<label class="fld"><span>Altura</span><input type="text" data-fedit data-f="altura" value="'+esc(f.altura)+'"></label>'+
@@ -1085,8 +1218,10 @@ function scrEdit(c){
       (body||'<p class="empty">Esta sesión todavía no tiene bloques.</p>')+
       '<button type="button" class="btn ghost wide" data-act="add-block">Agregar bloque</button>'+
       (c.plan.length>1?'<button type="button" class="link" data-act="del-session">Quitar esta sesión</button>':'')+
-      '<button type="button" class="btn wide" data-act="publish">Enviar plan a '+esc(c.first)+'</button>'
-      :'<p class="empty">Todavía no le agregaste sesiones a '+esc(c.first)+'. Agregá una según los días que entrena por semana (hasta 5).</p>');
+      '<button type="button" class="btn wide" data-act="publish">Enviar plan a '+esc(c.first)+'</button>'+
+      '<button type="button" class="btn ghost wide" data-act="archive-plan">Archivar este plan y empezar uno nuevo</button>'
+      :'<p class="empty">Todavía no le agregaste sesiones a '+esc(c.first)+'. Agregá una según los días que entrena por semana (hasta 5).</p>')+
+    ((c.archivo||[]).length?'<h2 class="dayh">Planes anteriores</h2>'+c.archivo.slice().reverse().map(function(inf,ix){return informeHtml(inf,'Plan #'+((c.archivo.length)-ix));}).join(''):'');
 }
 
 function scrProg(c){
@@ -1178,8 +1313,13 @@ function loadTestFrame(){
 }
 
 /* ---------- render ---------- */
+function tabUrl(id,tab){return location.pathname+location.search+'#c='+encodeURIComponent(id)+'&t='+encodeURIComponent(tab||'vista');}
+function syncHash(){
+  if(UI.role==='trainer'&&UI.sel){var h='#c='+encodeURIComponent(UI.sel)+'&t='+encodeURIComponent(UI.tab);if(location.hash!==h)history.replaceState(null,'',h);}
+}
 function render(scrollTop){
   var c=cur();
+  syncHash();
   var rb=document.querySelectorAll('[data-role]');
   for(var i=0;i<rb.length;i++){rb[i].setAttribute('aria-pressed',String(rb[i].getAttribute('data-role')===UI.role));}
   var tabs=UI.role==='alumno'?TABS_A:TABS_T;
@@ -1187,7 +1327,7 @@ function render(scrollTop){
   var tb=$('#tabs');
   tb.style.gridTemplateColumns='repeat('+tabs.length+',1fr)';
   tb.innerHTML=tabs.map(function(t){return '<button type="button" class="tab" data-act="tab" data-v="'+t[0]+'"'+(t[0]===UI.tab?' aria-current="page"':'')+'>'+icon(ICON_FOR[t[0]])+'<span>'+t[1]+'</span></button>';}).join('');
-  var fn={plan:UI.role==='alumno'?scrTrain:scrEdit,prog:scrProg,nutri:scrNutri,progs:scrProgs,alumnos:scrClients,ficha:scrFicha,test:scrTest}[UI.tab];
+  var fn={plan:UI.role==='alumno'?scrTrain:scrEdit,vista:scrVista,prog:scrProg,nutri:scrNutri,progs:scrProgs,alumnos:scrClients,ficha:scrFicha,test:scrTest}[UI.tab];
   $('#main').innerHTML=(UI.tab==='alumnos')?scrClients():(UI.tab==='test')?scrTest():(c?fn(c):'<p class="empty">Agregá un alumno para empezar.</p>');
   var wb=document.getElementById('whoBar');
   if(wb)wb.innerHTML='<span class="who-bar tag">'+(UI.role==='trainer'?'Panel del entrenador':esc(c?c.first:''))+'</span><button type="button" class="btn ghost small" data-act="logout">Salir</button>';
@@ -1216,6 +1356,7 @@ document.addEventListener('click',function(ev){
   else if(a==='week'){UI.week=+t.getAttribute('data-v');render();}
   else if(a==='day'){UI.day=+t.getAttribute('data-v');render();}
   else if(a==='pick'){UI.sel=t.getAttribute('data-id');UI.day=defaultDay(cl(UI.sel));UI.exId=null;UI.tab='plan';render(true);}
+  else if(a==='newtab'){window.open(tabUrl(t.getAttribute('data-id'),'vista'),'_blank');}
   else if(a==='close'){closeSheet();}
   else if(a==='video'){
     var f=findEx(c,t.getAttribute('data-ex'),UI.day);if(!f)return;
@@ -1251,6 +1392,13 @@ document.addEventListener('click',function(ev){
     save();render();
   }
   else if(a==='publish'){toast('Plan enviado a '+c.first);}
+  else if(a==='archive-plan'){
+    if(!confirm('Se va a guardar un resumen de este plan (progresión de carga y observaciones) en “Planes anteriores”, y se van a borrar los kilos y observaciones cargados para poder empezar un plan nuevo. La estructura de ejercicios queda igual, la podés editar. ¿Continuar?'))return;
+    var inf=buildInforme(c);
+    c.archivo=c.archivo||[];c.archivo.push(inf);
+    c.loads={};c.notes={};
+    save();toast('Plan archivado. Ya podés armar el plan nuevo.');render();
+  }
   else if(a==='toggle-prog'){
     var pid=t.getAttribute('data-id'),ix=c.unlocked.indexOf(pid);
     if(ix>-1)c.unlocked.splice(ix,1);else c.unlocked.push(pid);
