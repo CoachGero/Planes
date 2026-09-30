@@ -301,6 +301,8 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
   <canvas id="overlay"></canvas>
 </div>
 <div class="stats" id="statsBox"></div>
+<button class="act" id="pauseBtn" style="display:none">Pausar</button>
+<button class="ghost" id="replayBtn" style="display:none">Volver a reproducir</button>
 <button class="act" id="analizarBtn">Analizar repeticiones</button>
 <button class="ghost" id="resetBtn">Reiniciar</button>
 
@@ -431,9 +433,26 @@ setup().catch(e=>$('status').textContent='Error cargando el modelo: '+e.message)
 $('fileInput').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f||!poseLandmarker)return;
   clearAll();video.src=URL.createObjectURL(f);
-  video.onloadedmetadata=()=>{canvas.width=video.videoWidth;canvas.height=video.videoHeight;video.playbackRate=0.5;video.play();running=true;startRec();loop();};
+  video.onloadedmetadata=()=>{canvas.width=video.videoWidth;canvas.height=video.videoHeight;video.playbackRate=0.5;
+    $('pauseBtn').style.display='inline-block';$('replayBtn').style.display='inline-block';$('pauseBtn').textContent='Pausar';
+    video.play();running=true;startRec();loop();};
 });
 video.addEventListener('ended',()=>{stopRec();analizar();});
+video.addEventListener('play',()=>{$('pauseBtn').textContent='Pausar';});
+video.addEventListener('pause',()=>{if(!video.ended)$('pauseBtn').textContent='Reanudar';});
+$('pauseBtn').addEventListener('click',()=>{
+  if(video.paused){video.play();if(rec&&rec.state==='paused')try{rec.resume();}catch(e){}}
+  else{video.pause();if(rec&&rec.state==='recording')try{rec.pause();}catch(e){}}
+});
+/* volver a reproducir el mismo video desde el principio, para re-analizarlo (ej. si se movió la cámara) */
+$('replayBtn').addEventListener('click',async()=>{
+  if(!video.src)return;
+  video.pause();await stopRec();
+  dataLog=[];last=null;maxSpan=0;liveReps=0;romLive={};$('resultados').style.display='none';
+  ejDef().j.forEach(k=>{const e=$('v-'+k);if(e)e.textContent='--';});
+  video.currentTime=0;lastT=-1;
+  video.onseeked=()=>{video.onseeked=null;video.play();running=true;startRec();loop();};
+});
 $('analizarBtn').addEventListener('click',()=>{video.pause();stopRec();analizar();});
 
 /* ---- detección cuadro a cuadro: cabeza, cervical, cadera, rodilla, pie ---- */
