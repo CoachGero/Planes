@@ -1001,6 +1001,11 @@ function weekPct(c,w){
   c.plan.forEach(function(blocks,d){dayExercises(c,d).forEach(function(e){t+=e.rounds;f+=filled(c,w,d,e);});});
   return t?Math.round(f/t*100):0;
 }
+function planPct(c){
+  var t=0,f=0,nw=weeksOf(c);
+  for(var w=1;w<=nw;w++){c.plan.forEach(function(blocks,d){dayExercises(c,d).forEach(function(e){t+=e.rounds;f+=filled(c,w,d,e);});});}
+  return t?Math.round(f/t*100):0;
+}
 function allEx(c){var out=[];c.plan.forEach(function(blocks,d){blocks.forEach(function(b){(b.exercises||[]).forEach(function(e){out.push({ex:e,d:d,b:b});});});});return out;}
 function avgLoad(c,w,d,e){var arr=c.loads[key(w,d,e.id)]||[],s=0,n=0;for(var r=0;r<e.rounds;r++){if(num(arr[r])){s+=parseFloat(String(arr[r]).replace(',','.'));n++;}}return n?s/n:null;}
 function buildInforme(c){
@@ -1131,8 +1136,8 @@ function scrFicha(c){
 function scrClients(){
   return '<h1>Tus alumnos</h1><p class="sub">Elegí un alumno para ver o cargar su plan.</p>'+
   '<ul class="list">'+S.clients.map(function(x){
-    var p=weekPct(x,CUR_WEEK);
-    return '<li><button type="button" class="row-btn'+(x.id===UI.sel?' on':'')+'" data-act="pick" data-id="'+x.id+'"><span class="rb-main"><strong>'+esc(x.name)+'</strong><em>'+esc(x.goal)+'</em></span><span class="rb-side"><span class="bar" aria-hidden="true"><i style="width:'+p+'%"></i></span>'+p+'% de la semana '+CUR_WEEK+'</span></button></li>';
+    var p=planPct(x);
+    return '<li><button type="button" class="row-btn'+(x.id===UI.sel?' on':'')+'" data-act="pick" data-id="'+x.id+'"><span class="rb-main"><strong>'+esc(x.name)+'</strong><em>'+esc(x.goal)+'</em></span><span class="rb-side"><span class="bar" aria-hidden="true"><i style="width:'+p+'%"></i></span>'+p+'% del plan</span></button></li>';
   }).join('')+'</ul>'+
   (S.clients.length?'':'<p class="empty">Todavía no agregaste alumnos.</p>')+
   '<button type="button" class="btn ghost wide" data-act="add-client">Agregar alumno</button>';
