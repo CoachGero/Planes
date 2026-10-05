@@ -239,6 +239,12 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
   label.f{display:block;font-size:12px;color:var(--muted);margin-bottom:10px;}
   .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
   .wrap{position:relative;}
+  .heatpanel{position:absolute;right:8px;bottom:8px;width:78px;background:rgba(10,10,10,.72);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:6px 4px 4px;z-index:5;transition:width .2s,height .2s;overflow:hidden;}
+  .heatpanel.collapsed{width:26px;height:26px;padding:0;}
+  .heatpanel.collapsed svg,.heatpanel.collapsed .heatcap{display:none;}
+  .heatpanel svg{width:100%;height:auto;display:block;}
+  .heatclose{position:absolute;top:2px;right:2px;width:18px;height:18px;border:0;border-radius:4px;background:rgba(255,255,255,.12);color:#fff;font-size:12px;line-height:1;cursor:pointer;z-index:2;}
+  .heatcap{font-size:8px;color:#ddd;text-align:center;margin-top:2px;line-height:1.2;}
   video,canvas{width:100%;display:block;border-radius:6px;}
   canvas{position:absolute;top:0;left:0;pointer-events:none;}
   .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
@@ -299,6 +305,25 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
 <div class="wrap">
   <video id="video" playsinline muted></video>
   <canvas id="overlay"></canvas>
+  <div class="heatpanel" id="heatpanel">
+    <button type="button" class="heatclose" id="heatToggle" title="Mostrar/ocultar">—</button>
+    <svg viewBox="0 0 70 140" id="muscleSvg">
+      <circle cx="35" cy="12" r="9" fill="#2a2a2a"/>
+      <rect id="m-cuello" x="31" y="19" width="8" height="7" rx="2" fill="#2a2a2a"/>
+      <rect id="m-pecho" x="22" y="27" width="26" height="17" rx="4" fill="#2a2a2a"/>
+      <ellipse id="m-hombro-i" cx="18" cy="30" rx="7" ry="6" fill="#2a2a2a"/>
+      <ellipse id="m-hombro-d" cx="52" cy="30" rx="7" ry="6" fill="#2a2a2a"/>
+      <rect id="m-brazo-i" x="10" y="34" width="8" height="30" rx="4" fill="#2a2a2a"/>
+      <rect id="m-brazo-d" x="52" y="34" width="8" height="30" rx="4" fill="#2a2a2a"/>
+      <rect id="m-core" x="24" y="44" width="22" height="20" rx="4" fill="#2a2a2a"/>
+      <rect id="m-cadera" x="21" y="64" width="28" height="13" rx="5" fill="#2a2a2a"/>
+      <rect id="m-pierna-i" x="23" y="77" width="10" height="34" rx="4" fill="#2a2a2a"/>
+      <rect id="m-pierna-d" x="37" y="77" width="10" height="34" rx="4" fill="#2a2a2a"/>
+      <rect id="m-pantorrilla-i" x="24" y="111" width="8" height="24" rx="3" fill="#2a2a2a"/>
+      <rect id="m-pantorrilla-d" x="38" y="111" width="8" height="24" rx="3" fill="#2a2a2a"/>
+    </svg>
+    <div class="heatcap">Activación muscular (estimada)</div>
+  </div>
 </div>
 <div class="stats" id="statsBox"></div>
 <button class="act" id="pauseBtn" style="display:none">Pausar</button>
@@ -412,12 +437,27 @@ function ang3(a,b,c){
 }
 const vert=(a,b)=>Math.abs(Math.atan2(b[0]-a[0],b[1]-a[1]))*180/Math.PI; // 0° = tronco vertical (cervical sobre cadera)
 let poseLandmarker=null,running=false,dataLog=[],last=null,maxSpan=0,liveReps=0,romLive={};
+const REF_MAX={rodilla:90,cadera:70,tronco:40,cuello:30,codo:90,hombro:90,tobillo:40};
+const J2M={cuello:['m-cuello'],hombro:['m-hombro-i','m-hombro-d','m-pecho'],codo:['m-brazo-i','m-brazo-d'],tronco:['m-core'],cadera:['m-cadera'],rodilla:['m-pierna-i','m-pierna-d'],tobillo:['m-pantorrilla-i','m-pantorrilla-d']};
+function heatColor(v){const hue=(1-v)*215;return 'hsl('+hue.toFixed(0)+',80%,42%)';}
+function resetHeatmapColors(){Object.keys(J2M).forEach(k=>J2M[k].forEach(id=>{const el=document.getElementById(id);if(el)el.setAttribute('fill','#2a2a2a');}));}
+function updateHeatmap(activeJoints){
+  const actByMuscle={};
+  activeJoints.forEach(k=>{
+    const r=romLive[k];if(!r)return;
+    const act=Math.max(0,Math.min(1,(r[1]-r[0])/(REF_MAX[k]||60)));
+    (J2M[k]||[]).forEach(id=>{actByMuscle[id]=Math.max(actByMuscle[id]||0,act);});
+  });
+  Object.keys(actByMuscle).forEach(id=>{const el=document.getElementById(id);if(el)el.setAttribute('fill',heatColor(actByMuscle[id]));});
+}
 
 function buildStats(){
   $('statsBox').innerHTML=ejDef().j.map(k=>`<div class="stat"><div class="k">${JN[k]}</div><div class="v" id="v-${k}">--</div></div>`).join('');
 }
-function clearAll(){dataLog=[];last=null;maxSpan=0;liveReps=0;romLive={};$('resultados').style.display='none';ejDef().j.forEach(k=>{const e=$('v-'+k);if(e)e.textContent='--';});}
+function clearAll(){dataLog=[];last=null;maxSpan=0;liveReps=0;romLive={};resetHeatmapColors();$('resultados').style.display='none';ejDef().j.forEach(k=>{const e=$('v-'+k);if(e)e.textContent='--';});}
 $('resetBtn').onclick=clearAll;
+const hpT=$('heatToggle'),hp=$('heatpanel');
+if(hpT)hpT.onclick=()=>{hp.classList.toggle('collapsed');hpT.textContent=hp.classList.contains('collapsed')?'🔥':'—';};
 refresh();
 
 async function setup(){
@@ -448,7 +488,7 @@ $('pauseBtn').addEventListener('click',()=>{
 $('replayBtn').addEventListener('click',async()=>{
   if(!video.src)return;
   video.pause();await stopRec();
-  dataLog=[];last=null;maxSpan=0;liveReps=0;romLive={};$('resultados').style.display='none';
+  dataLog=[];last=null;maxSpan=0;liveReps=0;romLive={};resetHeatmapColors();$('resultados').style.display='none';
   ejDef().j.forEach(k=>{const e=$('v-'+k);if(e)e.textContent='--';});
   video.currentTime=0;lastT=-1;
   video.onseeked=()=>{video.onseeked=null;video.play();running=true;startRec();loop();};
@@ -498,6 +538,7 @@ function loop(){
       etiqueta(a[k].toFixed(0)+'°',q[0]+fs*0.6,q[1]-fs*0.3+(cerca?fs*1.1:0),fs,ix?'#ffd166':'#fff');
       const r=romLive[k]||(romLive[k]=[a[k],a[k]]);r[0]=Math.min(r[0],a[k]);r[1]=Math.max(r[1],a[k]);
     });
+    updateHeatmap(dd.j);
     const k0=Math.max(0,n-5),slope=a[dd.j[0]]-dataLog[k0].a[dd.j[0]];
     const fase=Math.abs(slope)<2?'Pausa':((dd.d==='ext')===(slope>0)?'Concéntrica':'Excéntrica');
     if(n>10&&n%5===0)liveReps=pares(extremos(dataLog.map(x=>x.a[dd.j[0]]),dataLog.map(x=>x.t),15),dd).length;
