@@ -239,10 +239,13 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
   label.f{display:block;font-size:12px;color:var(--muted);margin-bottom:10px;}
   .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
   .wrap{position:relative;}
-  .heatpanel{position:absolute;right:8px;bottom:8px;width:78px;background:rgba(10,10,10,.72);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:6px 4px 4px;z-index:5;transition:width .2s,height .2s;overflow:hidden;}
+  .heatpanel{position:absolute;right:8px;bottom:8px;width:128px;background:rgba(10,10,10,.76);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:6px 5px 4px;z-index:5;transition:width .2s,height .2s;overflow:hidden;}
   .heatpanel.collapsed{width:26px;height:26px;padding:0;}
-  .heatpanel.collapsed svg,.heatpanel.collapsed .heatcap{display:none;}
-  .heatpanel svg{width:100%;height:auto;display:block;}
+  .heatpanel.collapsed .heatbody,.heatpanel.collapsed .heatcap{display:none;}
+  .heatbody{display:flex;gap:4px;}
+  .heatcol{flex:1;text-align:center;}
+  .heatcol svg{width:100%;height:auto;display:block;}
+  .heatcol span{display:block;font-size:7px;color:#bbb;margin-top:1px;}
   .heatclose{position:absolute;top:2px;right:2px;width:18px;height:18px;border:0;border-radius:4px;background:rgba(255,255,255,.12);color:#fff;font-size:12px;line-height:1;cursor:pointer;z-index:2;}
   .heatcap{font-size:8px;color:#ddd;text-align:center;margin-top:2px;line-height:1.2;}
   video,canvas{width:100%;display:block;border-radius:6px;}
@@ -307,22 +310,47 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
   <canvas id="overlay"></canvas>
   <div class="heatpanel" id="heatpanel">
     <button type="button" class="heatclose" id="heatToggle" title="Mostrar/ocultar">—</button>
-    <svg viewBox="0 0 70 140" id="muscleSvg">
-      <circle cx="35" cy="12" r="9" fill="#2a2a2a"/>
-      <rect id="m-cuello" x="31" y="19" width="8" height="7" rx="2" fill="#2a2a2a"/>
-      <rect id="m-pecho" x="22" y="27" width="26" height="17" rx="4" fill="#2a2a2a"/>
-      <ellipse id="m-hombro-i" cx="18" cy="30" rx="7" ry="6" fill="#2a2a2a"/>
-      <ellipse id="m-hombro-d" cx="52" cy="30" rx="7" ry="6" fill="#2a2a2a"/>
-      <rect id="m-brazo-i" x="10" y="34" width="8" height="30" rx="4" fill="#2a2a2a"/>
-      <rect id="m-brazo-d" x="52" y="34" width="8" height="30" rx="4" fill="#2a2a2a"/>
-      <rect id="m-core" x="24" y="44" width="22" height="20" rx="4" fill="#2a2a2a"/>
-      <rect id="m-cadera" x="21" y="64" width="28" height="13" rx="5" fill="#2a2a2a"/>
-      <rect id="m-pierna-i" x="23" y="77" width="10" height="34" rx="4" fill="#2a2a2a"/>
-      <rect id="m-pierna-d" x="37" y="77" width="10" height="34" rx="4" fill="#2a2a2a"/>
-      <rect id="m-pantorrilla-i" x="24" y="111" width="8" height="24" rx="3" fill="#2a2a2a"/>
-      <rect id="m-pantorrilla-d" x="38" y="111" width="8" height="24" rx="3" fill="#2a2a2a"/>
-    </svg>
-    <div class="heatcap">Activación muscular (estimada)</div>
+    <div class="heatbody">
+    <div class="heatcol"><svg viewBox="0 0 70 150">
+      <ellipse cx="35" cy="11" rx="8" ry="9" fill="#3a3a3a"/>
+      <rect id="f-cuello" x="31" y="18" width="8" height="6" rx="2" fill="#2a2a2a"/>
+      <path id="f-deltoide-i" d="M16 25 Q10 26 10 34 Q15 37 20 33 Z" fill="#2a2a2a"/>
+      <path id="f-deltoide-d" d="M54 25 Q60 26 60 34 Q55 37 50 33 Z" fill="#2a2a2a"/>
+      <path id="f-pecho" d="M23 26 Q35 23 47 26 L46 40 Q35 44 24 40 Z" fill="#2a2a2a"/>
+      <path id="f-biceps-i" d="M11 35 Q8 42 10 52 L17 52 Q18 43 17 35 Z" fill="#2a2a2a"/>
+      <path id="f-biceps-d" d="M59 35 Q62 42 60 52 L53 52 Q52 43 53 35 Z" fill="#2a2a2a"/>
+      <path id="f-antebrazo-i" x="9" d="M9 53 Q7 62 9 70 L16 70 Q17 61 16 53 Z" fill="#2a2a2a"/>
+      <path id="f-antebrazo-d" d="M61 53 Q63 62 61 70 L54 70 Q53 61 54 53 Z" fill="#2a2a2a"/>
+      <g id="f-abdominales" fill="#2a2a2a">
+        <rect x="26" y="41" width="18" height="24" rx="4"/>
+      </g>
+      <path d="M35 41 L35 65 M27 47 L43 47 M27 53 L43 53 M27 59 L43 59" stroke="#161616" stroke-width="1" fill="none" pointer-events="none"/>
+      <rect id="f-cadera" x="23" y="66" width="24" height="10" rx="4" fill="#2a2a2a"/>
+      <path id="f-cuadriceps-i" d="M23 77 Q20 95 23 112 L32 112 Q33 95 31 77 Z" fill="#2a2a2a"/>
+      <path id="f-cuadriceps-d" d="M47 77 Q50 95 47 112 L38 112 Q37 95 39 77 Z" fill="#2a2a2a"/>
+      <path id="f-gemelos-i" d="M24 114 Q22 124 24 134 L31 134 Q32 124 31 114 Z" fill="#2a2a2a"/>
+      <path id="f-gemelos-d" d="M46 114 Q48 124 46 134 L39 134 Q38 124 39 114 Z" fill="#2a2a2a"/>
+    </svg><span>Frente</span></div>
+    <div class="heatcol"><svg viewBox="0 0 70 150">
+      <ellipse cx="35" cy="11" rx="8" ry="9" fill="#3a3a3a"/>
+      <rect id="b-cuello" x="31" y="18" width="8" height="6" rx="2" fill="#2a2a2a"/>
+      <path id="b-trapecio" d="M35 22 L18 30 Q35 37 52 30 Z" fill="#2a2a2a"/>
+      <path id="b-deltoide-i" d="M16 25 Q10 26 10 34 Q15 37 20 33 Z" fill="#2a2a2a"/>
+      <path id="b-deltoide-d" d="M54 25 Q60 26 60 34 Q55 37 50 33 Z" fill="#2a2a2a"/>
+      <path id="b-dorsales" d="M22 29 Q35 34 48 29 L45 52 Q35 58 25 52 Z" fill="#2a2a2a"/>
+      <path id="b-triceps-i" d="M11 35 Q8 42 10 52 L17 52 Q18 43 17 35 Z" fill="#2a2a2a"/>
+      <path id="b-triceps-d" d="M59 35 Q62 42 60 52 L53 52 Q52 43 53 35 Z" fill="#2a2a2a"/>
+      <path id="b-antebrazo-i" d="M9 53 Q7 62 9 70 L16 70 Q17 61 16 53 Z" fill="#2a2a2a"/>
+      <path id="b-antebrazo-d" d="M61 53 Q63 62 61 70 L54 70 Q53 61 54 53 Z" fill="#2a2a2a"/>
+      <rect id="b-lumbares" x="27" y="53" width="16" height="13" rx="3" fill="#2a2a2a"/>
+      <path id="b-gluteos" d="M22 67 Q35 65 48 67 Q48 78 35 79 Q22 78 22 67 Z" fill="#2a2a2a"/>
+      <path id="b-isquios-i" d="M23 80 Q20 96 23 112 L32 112 Q33 96 31 80 Z" fill="#2a2a2a"/>
+      <path id="b-isquios-d" d="M47 80 Q50 96 47 112 L38 112 Q37 96 39 80 Z" fill="#2a2a2a"/>
+      <path id="b-gemelos-i" d="M24 114 Q21 124 24 134 L32 134 Q33 124 31 114 Z" fill="#2a2a2a"/>
+      <path id="b-gemelos-d" d="M46 114 Q49 124 46 134 L38 134 Q37 124 39 114 Z" fill="#2a2a2a"/>
+    </svg><span>Espalda</span></div>
+    </div>
+    <div class="heatcap">Activación muscular (según el ejercicio)</div>
   </div>
 </div>
 <div class="stats" id="statsBox"></div>
@@ -350,52 +378,52 @@ const $=id=>document.getElementById(id);
 const video=$('video'),canvas=$('overlay'),ctx=canvas.getContext('2d');
 
 /* ---- ejercicios: articulaciones dominantes (j), punto que se sigue (p), fase de esfuerzo (d) y masa para la potencia (m) ---- */
-const X=(j,p,d,m)=>({j,p,d,m});
+const X=(j,p,d,m,mus)=>({j,p,d,m,mus:mus||[]});
 const GR={
  'Piernas':{
-  'Sentadilla trasera':X(['rodilla','cadera'],'cerv','ext','sis'),
-  'Sentadilla frontal':X(['rodilla','cadera'],'cerv','ext','sis'),
-  'Sentadilla búlgara':X(['rodilla','cadera'],'cerv','ext','sis'),
-  'Zancada / desplante':X(['rodilla','cadera'],'cerv','ext','sis'),
-  'Prensa de piernas':X(['rodilla','cadera'],'pie','ext','carga'),
-  'Extensión de cuádriceps':X(['rodilla','cadera'],'pie','ext','carga'),
-  'Curl femoral':X(['rodilla','cadera'],'pie','flex','carga'),
-  'Peso muerto convencional':X(['cadera','tronco'],'mun','ext','carga'),
-  'Peso muerto rumano':X(['cadera','tronco'],'mun','ext','carga'),
-  'Hip thrust':X(['cadera','rodilla'],'cad','ext','carga'),
-  'Elevación de talones':X(['tobillo','rodilla'],'cerv','ext','sis')},
+  'Sentadilla trasera':X(['rodilla','cadera'],'cerv','ext','sis',['cuadriceps','gluteos','isquios']),
+  'Sentadilla frontal':X(['rodilla','cadera'],'cerv','ext','sis',['cuadriceps','gluteos']),
+  'Sentadilla búlgara':X(['rodilla','cadera'],'cerv','ext','sis',['cuadriceps','gluteos']),
+  'Zancada / desplante':X(['rodilla','cadera'],'cerv','ext','sis',['cuadriceps','gluteos']),
+  'Prensa de piernas':X(['rodilla','cadera'],'pie','ext','carga',['cuadriceps','gluteos']),
+  'Extensión de cuádriceps':X(['rodilla','cadera'],'pie','ext','carga',['cuadriceps']),
+  'Curl femoral':X(['rodilla','cadera'],'pie','flex','carga',['isquios']),
+  'Peso muerto convencional':X(['cadera','tronco'],'mun','ext','carga',['isquios','gluteos','lumbares']),
+  'Peso muerto rumano':X(['cadera','tronco'],'mun','ext','carga',['isquios','gluteos','lumbares']),
+  'Hip thrust':X(['cadera','rodilla'],'cad','ext','carga',['gluteos','isquios']),
+  'Elevación de talones':X(['tobillo','rodilla'],'cerv','ext','sis',['gemelos'])},
  'Espalda':{
-  'Dominadas':X(['codo','hombro'],'cerv','flex','sis'),
-  'Jalón al pecho':X(['codo','hombro'],'mun','flex','carga'),
-  'Remo con barra':X(['codo','tronco'],'mun','flex','carga'),
-  'Remo con mancuerna':X(['codo','hombro'],'mun','flex','carga'),
-  'Remo en polea':X(['codo','hombro'],'mun','flex','carga')},
+  'Dominadas':X(['codo','hombro'],'cerv','flex','sis',['dorsales','biceps','antebrazo']),
+  'Jalón al pecho':X(['codo','hombro'],'mun','flex','carga',['dorsales','biceps']),
+  'Remo con barra':X(['codo','tronco'],'mun','flex','carga',['dorsales','biceps','lumbares']),
+  'Remo con mancuerna':X(['codo','hombro'],'mun','flex','carga',['dorsales','biceps']),
+  'Remo en polea':X(['codo','hombro'],'mun','flex','carga',['dorsales','biceps'])},
  'Pecho':{
-  'Press banca plano':X(['codo','hombro'],'mun','ext','carga'),
-  'Press banca inclinado':X(['codo','hombro'],'mun','ext','carga'),
-  'Press con mancuernas':X(['codo','hombro'],'mun','ext','carga'),
-  'Fondos en paralelas':X(['codo','hombro'],'cerv','ext','sis'),
-  'Flexiones de brazos':X(['codo','hombro'],'cerv','ext','sis')},
+  'Press banca plano':X(['codo','hombro'],'mun','ext','carga',['pecho','triceps','hombro']),
+  'Press banca inclinado':X(['codo','hombro'],'mun','ext','carga',['pecho','hombro','triceps']),
+  'Press con mancuernas':X(['codo','hombro'],'mun','ext','carga',['pecho','triceps','hombro']),
+  'Fondos en paralelas':X(['codo','hombro'],'cerv','ext','sis',['pecho','triceps']),
+  'Flexiones de brazos':X(['codo','hombro'],'cerv','ext','sis',['pecho','triceps','hombro'])},
  'Hombros':{
-  'Press militar':X(['codo','hombro'],'mun','ext','carga'),
-  'Press con mancuernas sentado':X(['codo','hombro'],'mun','ext','carga'),
-  'Elevaciones laterales':X(['hombro','codo'],'mun','ext','carga'),
-  'Elevaciones frontales':X(['hombro','codo'],'mun','ext','carga')},
+  'Press militar':X(['codo','hombro'],'mun','ext','carga',['hombro','triceps']),
+  'Press con mancuernas sentado':X(['codo','hombro'],'mun','ext','carga',['hombro','triceps']),
+  'Elevaciones laterales':X(['hombro','codo'],'mun','ext','carga',['hombro']),
+  'Elevaciones frontales':X(['hombro','codo'],'mun','ext','carga',['hombro'])},
  'Brazos':{
-  'Curl de bíceps con barra':X(['codo','hombro'],'mun','flex','carga'),
-  'Curl martillo':X(['codo','hombro'],'mun','flex','carga'),
-  'Extensión de tríceps en polea':X(['codo','hombro'],'mun','ext','carga'),
-  'Press francés':X(['codo','hombro'],'mun','ext','carga')},
+  'Curl de bíceps con barra':X(['codo','hombro'],'mun','flex','carga',['biceps','antebrazo']),
+  'Curl martillo':X(['codo','hombro'],'mun','flex','carga',['biceps','antebrazo']),
+  'Extensión de tríceps en polea':X(['codo','hombro'],'mun','ext','carga',['triceps']),
+  'Press francés':X(['codo','hombro'],'mun','ext','carga',['triceps'])},
  'Derivados olímpicos':{
-  'Clean (cargada)':X(['cadera','rodilla'],'mun','ext','carga'),
-  'Power clean':X(['cadera','rodilla'],'mun','ext','carga'),
-  'Hang clean':X(['cadera','rodilla'],'mun','ext','carga'),
-  'Snatch (arranque)':X(['cadera','rodilla'],'mun','ext','carga'),
-  'Power snatch':X(['cadera','rodilla'],'mun','ext','carga'),
-  'Push press':X(['rodilla','codo'],'mun','ext','carga'),
-  'Push jerk':X(['rodilla','codo'],'mun','ext','carga'),
-  'Thruster':X(['rodilla','codo'],'mun','ext','carga'),
-  'Kettlebell swing':X(['cadera','rodilla'],'mun','ext','carga')}
+  'Clean (cargada)':X(['cadera','rodilla'],'mun','ext','carga',['cuadriceps','gluteos','trapecio','isquios']),
+  'Power clean':X(['cadera','rodilla'],'mun','ext','carga',['cuadriceps','gluteos','trapecio']),
+  'Hang clean':X(['cadera','rodilla'],'mun','ext','carga',['cuadriceps','gluteos','trapecio']),
+  'Snatch (arranque)':X(['cadera','rodilla'],'mun','ext','carga',['cuadriceps','gluteos','trapecio','hombro']),
+  'Power snatch':X(['cadera','rodilla'],'mun','ext','carga',['cuadriceps','gluteos','trapecio','hombro']),
+  'Push press':X(['rodilla','codo'],'mun','ext','carga',['hombro','triceps','cuadriceps']),
+  'Push jerk':X(['rodilla','codo'],'mun','ext','carga',['hombro','triceps','cuadriceps']),
+  'Thruster':X(['rodilla','codo'],'mun','ext','carga',['cuadriceps','gluteos','hombro','triceps']),
+  'Kettlebell swing':X(['cadera','rodilla'],'mun','ext','carga',['gluteos','isquios','lumbares'])}
 };
 const EJ={};Object.values(GR).forEach(g=>Object.assign(EJ,g));
 const JN={rodilla:'Rodilla',cadera:'Cadera',tronco:'Tronco (inclinación)',cuello:'Cuello',codo:'Codo',hombro:'Hombro',tobillo:'Tobillo'};
@@ -438,17 +466,42 @@ function ang3(a,b,c){
 const vert=(a,b)=>Math.abs(Math.atan2(b[0]-a[0],b[1]-a[1]))*180/Math.PI; // 0° = tronco vertical (cervical sobre cadera)
 let poseLandmarker=null,running=false,dataLog=[],last=null,maxSpan=0,liveReps=0,romLive={};
 const REF_MAX={rodilla:90,cadera:70,tronco:40,cuello:30,codo:90,hombro:90,tobillo:40};
-const J2M={cuello:['m-cuello'],hombro:['m-hombro-i','m-hombro-d','m-pecho'],codo:['m-brazo-i','m-brazo-d'],tronco:['m-core'],cadera:['m-cadera'],rodilla:['m-pierna-i','m-pierna-d'],tobillo:['m-pantorrilla-i','m-pantorrilla-d']};
+/* músculo canónico -> formas del dibujo (frente f-, espalda b-) que se colorean */
+const MUSCLE_DOM={
+  cuello:['f-cuello','b-cuello'],
+  hombro:['f-deltoide-i','f-deltoide-d','b-deltoide-i','b-deltoide-d'],
+  pecho:['f-pecho'],
+  trapecio:['b-trapecio'],
+  dorsales:['b-dorsales'],
+  biceps:['f-biceps-i','f-biceps-d'],
+  triceps:['b-triceps-i','b-triceps-d'],
+  antebrazo:['f-antebrazo-i','f-antebrazo-d','b-antebrazo-i','b-antebrazo-d'],
+  abdominales:['f-abdominales'],
+  lumbares:['b-lumbares'],
+  gluteos:['b-gluteos','f-cadera'],
+  cuadriceps:['f-cuadriceps-i','f-cuadriceps-d'],
+  isquios:['b-isquios-i','b-isquios-d'],
+  gemelos:['f-gemelos-i','f-gemelos-d','b-gemelos-i','b-gemelos-d']
+};
+/* respaldo cuando el ejercicio no tiene músculos cargados (p.ej. "Otro"): se estima por la articulación que más se mueve */
+const J2MUS={cuello:['cuello'],hombro:['hombro'],codo:['biceps','triceps','antebrazo'],tronco:['abdominales','lumbares'],cadera:['gluteos','isquios'],rodilla:['cuadriceps'],tobillo:['gemelos']};
 function heatColor(v){const hue=(1-v)*215;return 'hsl('+hue.toFixed(0)+',80%,42%)';}
-function resetHeatmapColors(){Object.keys(J2M).forEach(k=>J2M[k].forEach(id=>{const el=document.getElementById(id);if(el)el.setAttribute('fill','#2a2a2a');}));}
+function resetHeatmapColors(){Object.keys(MUSCLE_DOM).forEach(k=>MUSCLE_DOM[k].forEach(id=>{const el=document.getElementById(id);if(el)el.setAttribute('fill','#2a2a2a');}));}
 function updateHeatmap(activeJoints){
-  const actByMuscle={};
-  activeJoints.forEach(k=>{
-    const r=romLive[k];if(!r)return;
-    const act=Math.max(0,Math.min(1,(r[1]-r[0])/(REF_MAX[k]||60)));
-    (J2M[k]||[]).forEach(id=>{actByMuscle[id]=Math.max(actByMuscle[id]||0,act);});
+  const dd=ejDef(),active={};
+  if(dd&&dd.mus&&dd.mus.length){
+    dd.mus.forEach(m=>{active[m]=1;});
+  }else{
+    activeJoints.forEach(k=>{
+      const r=romLive[k];if(!r)return;
+      const act=Math.max(0,Math.min(1,(r[1]-r[0])/(REF_MAX[k]||60)));
+      (J2MUS[k]||[]).forEach(m=>{active[m]=Math.max(active[m]||0,act);});
+    });
+  }
+  resetHeatmapColors();
+  Object.keys(active).forEach(m=>{
+    (MUSCLE_DOM[m]||[]).forEach(id=>{const el=document.getElementById(id);if(el)el.setAttribute('fill',heatColor(active[m]));});
   });
-  Object.keys(actByMuscle).forEach(id=>{const el=document.getElementById(id);if(el)el.setAttribute('fill',heatColor(actByMuscle[id]));});
 }
 
 function buildStats(){
@@ -845,7 +898,6 @@ var key=function(w,d,id){return w+'|'+d+'|'+id;};
 
 var MAX_SESSIONS=5;
 var MAX_WEEKS=6;
-var MONTHS_SHORT=['abr','may','jun','jul','ago','sep'];
 var MON=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 var CUR_WEEK=3;
 var WA='https://wa.me/5492213644138';
@@ -1050,7 +1102,7 @@ function planPct(c){
 function allEx(c){var out=[];c.plan.forEach(function(blocks,d){blocks.forEach(function(b){(b.exercises||[]).forEach(function(e){out.push({ex:e,d:d,b:b});});});});return out;}
 function avgLoad(c,w,d,e){var arr=c.loads[key(w,d,e.id)]||[],s=0,n=0;for(var r=0;r<e.rounds;r++){if(num(arr[r])){s+=parseFloat(String(arr[r]).replace(',','.'));n++;}}return n?s/n:null;}
 function buildInforme(c){
-  var nw=weeksOf(c),lista=allEx(c),prog=[],obs=[],totC=0,totF=0;
+  var nw=weeksOf(c),lista=allEx(c),prog=[],obs=[],totC=0,totF=0,detalle=[];
   lista.forEach(function(it){
     var e=it.ex,d=it.d,w0=null,w1=null,v0=null,v1=null;
     for(var w=1;w<=nw;w++){var v=avgLoad(c,w,d,e);if(v!=null){if(w0===null){w0=w;v0=v;}w1=w;v1=v;}}
@@ -1058,12 +1110,14 @@ function buildInforme(c){
     for(var w2=1;w2<=nw;w2++){totF+=filled(c,w2,d,e);}
     if(w0!==null&&w1!==null&&w1>w0)prog.push({nombre:e.name,delta:v1-v0,de:v0,a:v1,semanas:w0+' a '+w1});
     var nk,nv;for(var w3=1;w3<=nw;w3++){nk=key(w3,d,e.id);nv=(c.notes||{})[nk];if(nv&&nv.trim())obs.push({ex:e.name,semana:w3,texto:nv.trim()});}
+    var ex=extremes(c,it),rb=repBreakdown(c,it);
+    if(ex.mx||rb.length)detalle.push({nombre:e.name,d:d,overallMax:ex.mx,overallMin:ex.mn,porReps:rb});
   });
   totC*=nw;
   prog.sort(function(a,b){return b.delta-a.delta;});
   var mejor=prog.length?prog[0]:null,peor=prog.length>1?prog[prog.length-1]:(prog.length===1?prog[0]:null);
   if(peor===mejor)peor=null;
-  return {fecha:new Date().toISOString(),semanas:nw,cumplimiento:totC?Math.round(totF/totC*100):0,mejor:mejor,peor:peor,progresion:prog,observaciones:obs};
+  return {fecha:new Date().toISOString(),semanas:nw,cumplimiento:totC?Math.round(totF/totC*100):0,mejor:mejor,peor:peor,progresion:prog,observaciones:obs,detalle:detalle};
 }
 function informeHtml(inf,titulo){
   var f1=function(v){return (Math.round(v*10)/10)+' kg';};
@@ -1071,6 +1125,14 @@ function informeHtml(inf,titulo){
   h+=inf.mejor?'<div>Mayor progresión de carga: <strong class="up">'+esc(inf.mejor.nombre)+'</strong> ('+f1(inf.mejor.de)+' → '+f1(inf.mejor.a)+', semanas '+inf.mejor.semanas+')</div>':'<div class="d">Sin datos suficientes para medir progresión.</div>';
   h+=inf.peor?'<div>Menor progresión'+(inf.peor.delta<0?' (bajó de carga)':'')+': <strong class="'+(inf.peor.delta<0?'down':'')+'">'+esc(inf.peor.nombre)+'</strong> ('+f1(inf.peor.de)+' → '+f1(inf.peor.a)+', semanas '+inf.peor.semanas+')</div>':'';
   if(inf.observaciones&&inf.observaciones.length)h+='<div style="margin-top:8px">Observaciones del alumno:</div><ul>'+inf.observaciones.map(function(o){return '<li>'+esc(o.ex)+' (semana '+o.semana+'): '+esc(o.texto)+'</li>';}).join('')+'</ul>';
+  if(inf.detalle&&inf.detalle.length){
+    h+='<details class="fold" style="margin-top:8px"><summary>Ver máximas y mínimas por ejercicio de este plan</summary>'+
+      inf.detalle.map(function(dt){
+        return '<p style="margin:10px 0 2px"><strong>'+esc(dt.nombre)+'</strong></p>'+repBreakdownHtml(dt.porReps,dt.d);
+      }).join('')+'</details>';
+  }else{
+    h+='<p class="legend" style="margin-top:8px">Este plan se archivó antes de guardar el detalle por repetición — a partir de ahora los próximos planes que archives sí lo van a tener.</p>';
+  }
   return h+'</div>';
 }
 function findEx(c,id,day){
@@ -1086,24 +1148,38 @@ function findEx(c,id,day){
 function extremes(c,item){
   var mx=null,mn=null;
   for(var w=1;w<=weeksOf(c);w++){
-    var arr=c.loads[key(w,item.d,item.ex.id)]||[];
+    var arr=c.loads[key(w,item.d,item.ex.id)]||[],rirA=rirArr(item.ex,w);
     for(var r=0;r<item.ex.rounds;r++){
       var n=num(arr[r]);if(n==null)continue;
-      var rec={kg:n,w:w,r:r+1,d:item.d};
+      var rec={kg:n,w:w,r:r+1,d:item.d,rir:rirA[r]};
       if(!mx||n>mx.kg)mx=rec;
       if(!mn||n<mn.kg)mn=rec;
     }
   }
   return {mx:mx,mn:mn};
 }
-function monthly(c,item){
-  var base=(item.ex.kg||20)*c.scale;
-  var v=[0,1,2,3,4].map(function(i){return roundTo(base*(0.70+0.06*i),2.5);});
-  var e=extremes(c,item);
-  v.push(e.mx?e.mx.kg:null);
-  return v;
+function repBreakdown(c,item){
+  var e=item.ex,d=item.d,nw=weeksOf(c),groups={};
+  for(var w=1;w<=nw;w++){
+    var repsA=repsArr(e,w),rirA=rirArr(e,w),arr=c.loads[key(w,d,e.id)]||[];
+    for(var r=0;r<e.rounds;r++){
+      var n=num(arr[r]);if(n==null)continue;
+      var rk=String(repsA[r]==null?'':repsA[r]);
+      var rec={kg:n,w:w,r:r+1,d:d,rir:rirA[r]};
+      if(!groups[rk])groups[rk]={reps:repsA[r],max:rec,min:rec};
+      else{if(n>groups[rk].max.kg)groups[rk].max=rec;if(n<groups[rk].min.kg)groups[rk].min=rec;}
+    }
+  }
+  return Object.keys(groups).map(function(k){return groups[k];}).sort(function(a,b){return String(a.reps).localeCompare(String(b.reps),'es',{numeric:true});});
 }
-
+function repBreakdownHtml(rb,dayN){
+  if(!rb.length)return '<p class="legend">Sin cargas registradas.</p>';
+  return '<div class="scroll"><table class="tbl"><thead><tr><th>Reps</th><th>Máx.</th><th>Dónde</th><th>Mín.</th><th>Dónde</th></tr></thead><tbody>'+
+    rb.map(function(g){
+      var w=function(r){return r?'Sem '+r.w+'·Ses '+((dayN!=null?dayN:r.d)+1)+'·R'+r.r+(r.rir!=null&&r.rir!==''?'·RIR '+r.rir:''):'';};
+      return '<tr><td>'+esc(g.reps)+'</td><td>'+fmtN(g.max.kg)+' kg</td><td class="w">'+w(g.max)+'</td><td>'+fmtN(g.min.kg)+' kg</td><td class="w">'+w(g.min)+'</td></tr>';
+    }).join('')+'</tbody></table></div>';
+}
 /* ---------- gráfico ---------- */
 function lineChart(labels,vals,unit,desc){
   var W=340,H=190,pl=38,pr=14,pt=22,pb=26;
@@ -1290,27 +1366,46 @@ function scrEdit(c){
 }
 
 function scrProg(c){
-  var list=allEx(c);
-  var head='<h1>Progreso</h1><p class="sub">'+(UI.role==='alumno'?'Tu evolución de cargas mes a mes.':'Evolución de cargas de '+esc(c.first)+'.')+'</p>'+clientBar(c);
-  if(!list.length)return head+'<p class="empty">Todavía no hay ejercicios cargados.</p>';
-  var item=list.filter(function(x){return x.ex.id===UI.exId;})[0]||list[0];
-  UI.exId=item.ex.id;
-  var vals=monthly(c,item);
-  var opts=list.map(function(x){return '<option value="'+x.ex.id+'"'+(x.ex.id===item.ex.id?' selected':'')+'>'+esc(x.ex.name)+'</option>';}).join('');
-  var first=vals[0],last=null;for(var i=vals.length-1;i>=0;i--){if(vals[i]!=null){last=vals[i];break;}}
-  var diff=last-first,pct=first?Math.round(diff/first*100):0;
-  var delta='<p class="delta">Carga máxima desde abril: <strong>'+(diff>=0?'+':'')+fmtN(diff)+' kg</strong> ('+(pct>=0?'+':'')+pct+'%).</p>';
-  var reg=list.map(function(x){
-    var e=extremes(c,x);
-    var w=function(r){return r?'Semana '+r.w+', ronda '+r.r+', sesión '+(r.d+1):'';};
-    return '<div class="reg"><h3>'+esc(x.ex.name)+'</h3>'+
-      '<div><div class="k">Carga máxima</div><div class="v">'+(e.mx?fmtN(e.mx.kg)+' kg':'Sin datos')+'</div><div class="w">'+w(e.mx)+'</div></div>'+
-      '<div><div class="k">Carga mínima</div><div class="v min">'+(e.mn?fmtN(e.mn.kg)+' kg':'Sin datos')+'</div><div class="w">'+w(e.mn)+'</div></div></div>';
-  }).join('');
+  var list=allEx(c),archivo=c.archivo||[];
+  var head='<h1>Progreso</h1><p class="sub">'+(UI.role==='alumno'?'Tu evolución de cargas, plan a plan.':'Evolución de cargas de '+esc(c.first)+', plan a plan.')+'</p>'+clientBar(c);
+  var names={};
+  list.forEach(function(x){names[x.ex.name]=true;});
+  archivo.forEach(function(inf){(inf.detalle||[]).forEach(function(dt){names[dt.nombre]=true;});});
+  var nameList=Object.keys(names);
+  if(!nameList.length)return head+'<p class="empty">Todavía no hay ejercicios cargados.</p>';
+  var curName=(UI.exName&&names[UI.exName])?UI.exName:nameList[0];
+  UI.exName=curName;
+  var item=list.filter(function(x){return x.ex.name===curName;})[0]||null;
+  var opts=nameList.map(function(n){return '<option value="'+esc(n)+'"'+(n===curName?' selected':'')+'>'+esc(n)+'</option>';}).join('');
+
+  var pts=[],labels=[];
+  archivo.forEach(function(inf){
+    var dt=(inf.detalle||[]).filter(function(x){return x.nombre===curName;})[0];
+    pts.push(dt&&dt.overallMax?dt.overallMax.kg:null);
+    labels.push(new Date(inf.fecha).toLocaleDateString('es-AR',{month:'short',year:'2-digit'}));
+  });
+  var liveMax=item?extremes(c,item).mx:null;
+  pts.push(liveMax?liveMax.kg:null);labels.push('Actual');
+  var first=null,last=null;
+  for(var i=0;i<pts.length;i++){if(pts[i]!=null){if(first==null)first=pts[i];last=pts[i];}}
+  var delta=(first!=null&&last!=null)?'<p class="delta">Carga máxima — variación total: <strong>'+(last-first>=0?'+':'')+fmtN(last-first)+' kg</strong> ('+(first?(last-first>=0?'+':'')+Math.round((last-first)/first*100):0)+'%).</p>':'';
+
+  var liveSection=item?
+    ('<h2>Detalle del plan actual</h2><p class="sub" style="margin-bottom:4px">Carga máxima y mínima según la cantidad de repeticiones de cada ronda.</p>'+repBreakdownHtml(repBreakdown(c,item),item.d))
+    :('<p class="empty">Este ejercicio ya no está en el plan actual'+(UI.role==='trainer'?' de '+esc(c.first):'')+'; abajo tenés su historial.</p>');
+
+  var pastEntries=archivo.slice().reverse().map(function(inf){
+    var dt=(inf.detalle||[]).filter(function(x){return x.nombre===curName;})[0];
+    if(!dt)return '';
+    var titulo=new Date(inf.fecha).toLocaleDateString('es-AR')+' · '+inf.semanas+' semana'+(inf.semanas===1?'':'s');
+    return '<details class="fold"><summary>'+esc(titulo)+'</summary>'+repBreakdownHtml(dt.porReps,dt.d)+'</details>';
+  }).filter(Boolean).join('');
+  var histSection=pastEntries?('<h2 style="margin-top:18px">Historial de este ejercicio</h2>'+pastEntries):'';
+
   return head+
-    '<label class="fld" style="margin-top:14px">Ejercicio<select class="sel" data-sel="ex" style="margin-top:4px">'+opts+'</select></label>'+
-    '<div class="chart">'+lineChart(MONTHS_SHORT,vals,'kg','Carga máxima mensual de '+item.ex.name+' en kilos')+'</div>'+delta+
-    '<h2>Máximas y mínimas de septiembre</h2><p class="sub" style="margin-bottom:4px">Con la ronda y el día en que se hicieron.</p>'+reg;
+    '<label class="fld" style="margin-top:14px">Ejercicio<select class="sel" data-sel="exname" style="margin-top:4px">'+opts+'</select></label>'+
+    '<div class="chart">'+lineChart(labels,pts,'kg','Carga máxima de '+esc(curName)+' por plan, en kilos')+'</div>'+delta+
+    liveSection+histSection;
 }
 
 function scrNutri(c){
@@ -1458,7 +1553,7 @@ document.addEventListener('click',function(ev){
   }
   else if(a==='publish'){toast('Plan enviado a '+c.first);}
   else if(a==='archive-plan'){
-    if(!confirm('Se va a guardar un resumen de este plan (progresión de carga y observaciones) en “Planes anteriores”, y se van a borrar los kilos y observaciones cargados para poder empezar un plan nuevo. La estructura de ejercicios queda igual, la podés editar. ¿Continuar?'))return;
+    if(!confirm('Se va a guardar en "Planes anteriores" la progresión, las observaciones, y el detalle de carga máxima y mínima de cada ejercicio por cantidad de repeticiones (semana, sesión, ronda y RIR). Después se borran los kilos y observaciones cargados para poder empezar un plan nuevo; la estructura de ejercicios (reps/RIR/rondas) queda igual, la podés editar. ¿Continuar?'))return;
     var inf=buildInforme(c);
     c.archivo=c.archivo||[];c.archivo.push(inf);
     c.loads={};c.notes={};
@@ -1557,6 +1652,7 @@ document.addEventListener('input',function(ev){
 document.addEventListener('change',function(ev){
   var t=ev.target,s=t.getAttribute&&t.getAttribute('data-sel');if(!s)return;
   if(s==='ex'){UI.exId=t.value;render();}
+  else if(s==='exname'){UI.exName=t.value;render();}
   else if(s==='metric'){UI.metric=t.value;render();}
   else if(s==='rounds'){var cc=cur();var f=findEx(cc,t.getAttribute('data-ex'),UI.day);if(f){f.ex.rounds=+t.value;save();render();}}
   else if(s==='weeksCount'){var c2=cur();c2.weeksCount=+t.value;if(UI.week>c2.weeksCount)UI.week=c2.weeksCount;save();render();}
