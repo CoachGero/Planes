@@ -239,13 +239,16 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
   label.f{display:block;font-size:12px;color:var(--muted);margin-bottom:10px;}
   .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
   .wrap{position:relative;}
-  .heatpanel{position:absolute;right:8px;bottom:8px;width:128px;background:rgba(10,10,10,.76);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:6px 5px 4px;z-index:5;transition:width .2s,height .2s;overflow:hidden;}
+  .heatpanel{position:absolute;right:8px;bottom:8px;width:104px;background:rgba(10,10,10,.82);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:6px 7px 7px;z-index:5;transition:width .2s,height .2s;overflow:hidden;}
   .heatpanel.collapsed{width:26px;height:26px;padding:0;}
-  .heatpanel.collapsed .heatbody,.heatpanel.collapsed .heatcap{display:none;}
-  .heatbody{display:flex;gap:4px;}
-  .heatcol{flex:1;text-align:center;}
-  .heatcol svg{width:100%;height:auto;display:block;}
-  .heatcol span{display:block;font-size:7px;color:#bbb;margin-top:1px;}
+  .heatpanel.collapsed .heatbody{display:none;}
+  .heatcap-top{font-size:6px;letter-spacing:.05em;color:#999;text-align:center;margin-bottom:3px;}
+  #skelSvg{width:100%;height:auto;display:block;}
+  .heatbar{position:relative;height:5px;border-radius:3px;margin-top:4px;background:linear-gradient(90deg,hsl(215,80%,42%),hsl(120,80%,42%),hsl(50,80%,42%),hsl(0,80%,42%));}
+  .heatbar-dot{position:absolute;top:-2px;width:9px;height:9px;border-radius:50%;background:#fff;border:2px solid #111;transform:translateX(-50%);left:0%;transition:left .15s linear;}
+  .heatbar-lbl{display:flex;justify-content:space-between;font-size:5.5px;color:#999;margin-top:2px;letter-spacing:.02em;}
+  .heatmus{font-size:7px;color:#ddd;margin-top:4px;line-height:1.3;}
+  .heatmus strong{color:#ff4d52;display:block;font-size:6px;letter-spacing:.04em;}
   .heatclose{position:absolute;top:2px;right:2px;width:18px;height:18px;border:0;border-radius:4px;background:rgba(255,255,255,.12);color:#fff;font-size:12px;line-height:1;cursor:pointer;z-index:2;}
   .heatcap{font-size:8px;color:#ddd;text-align:center;margin-top:2px;line-height:1.2;}
   video,canvas{width:100%;display:block;border-radius:6px;}
@@ -311,46 +314,40 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
   <div class="heatpanel" id="heatpanel">
     <button type="button" class="heatclose" id="heatToggle" title="Mostrar/ocultar">—</button>
     <div class="heatbody">
-    <div class="heatcol"><svg viewBox="0 0 70 150">
-      <ellipse cx="35" cy="11" rx="8" ry="9" fill="#3a3a3a"/>
-      <rect id="f-cuello" x="31" y="18" width="8" height="6" rx="2" fill="#2a2a2a"/>
-      <path id="f-deltoide-i" d="M16 25 Q10 26 10 34 Q15 37 20 33 Z" fill="#2a2a2a"/>
-      <path id="f-deltoide-d" d="M54 25 Q60 26 60 34 Q55 37 50 33 Z" fill="#2a2a2a"/>
-      <path id="f-pecho" d="M23 26 Q35 23 47 26 L46 40 Q35 44 24 40 Z" fill="#2a2a2a"/>
-      <path id="f-biceps-i" d="M11 35 Q8 42 10 52 L17 52 Q18 43 17 35 Z" fill="#2a2a2a"/>
-      <path id="f-biceps-d" d="M59 35 Q62 42 60 52 L53 52 Q52 43 53 35 Z" fill="#2a2a2a"/>
-      <path id="f-antebrazo-i" x="9" d="M9 53 Q7 62 9 70 L16 70 Q17 61 16 53 Z" fill="#2a2a2a"/>
-      <path id="f-antebrazo-d" d="M61 53 Q63 62 61 70 L54 70 Q53 61 54 53 Z" fill="#2a2a2a"/>
-      <g id="f-abdominales" fill="#2a2a2a">
-        <rect x="26" y="41" width="18" height="24" rx="4"/>
-      </g>
-      <path d="M35 41 L35 65 M27 47 L43 47 M27 53 L43 53 M27 59 L43 59" stroke="#161616" stroke-width="1" fill="none" pointer-events="none"/>
-      <rect id="f-cadera" x="23" y="66" width="24" height="10" rx="4" fill="#2a2a2a"/>
-      <path id="f-cuadriceps-i" d="M23 77 Q20 95 23 112 L32 112 Q33 95 31 77 Z" fill="#2a2a2a"/>
-      <path id="f-cuadriceps-d" d="M47 77 Q50 95 47 112 L38 112 Q37 95 39 77 Z" fill="#2a2a2a"/>
-      <path id="f-gemelos-i" d="M24 114 Q22 124 24 134 L31 134 Q32 124 31 114 Z" fill="#2a2a2a"/>
-      <path id="f-gemelos-d" d="M46 114 Q48 124 46 134 L39 134 Q38 124 39 114 Z" fill="#2a2a2a"/>
-    </svg><span>Frente</span></div>
-    <div class="heatcol"><svg viewBox="0 0 70 150">
-      <ellipse cx="35" cy="11" rx="8" ry="9" fill="#3a3a3a"/>
-      <rect id="b-cuello" x="31" y="18" width="8" height="6" rx="2" fill="#2a2a2a"/>
-      <path id="b-trapecio" d="M35 22 L18 30 Q35 37 52 30 Z" fill="#2a2a2a"/>
-      <path id="b-deltoide-i" d="M16 25 Q10 26 10 34 Q15 37 20 33 Z" fill="#2a2a2a"/>
-      <path id="b-deltoide-d" d="M54 25 Q60 26 60 34 Q55 37 50 33 Z" fill="#2a2a2a"/>
-      <path id="b-dorsales" d="M22 29 Q35 34 48 29 L45 52 Q35 58 25 52 Z" fill="#2a2a2a"/>
-      <path id="b-triceps-i" d="M11 35 Q8 42 10 52 L17 52 Q18 43 17 35 Z" fill="#2a2a2a"/>
-      <path id="b-triceps-d" d="M59 35 Q62 42 60 52 L53 52 Q52 43 53 35 Z" fill="#2a2a2a"/>
-      <path id="b-antebrazo-i" d="M9 53 Q7 62 9 70 L16 70 Q17 61 16 53 Z" fill="#2a2a2a"/>
-      <path id="b-antebrazo-d" d="M61 53 Q63 62 61 70 L54 70 Q53 61 54 53 Z" fill="#2a2a2a"/>
-      <rect id="b-lumbares" x="27" y="53" width="16" height="13" rx="3" fill="#2a2a2a"/>
-      <path id="b-gluteos" d="M22 67 Q35 65 48 67 Q48 78 35 79 Q22 78 22 67 Z" fill="#2a2a2a"/>
-      <path id="b-isquios-i" d="M23 80 Q20 96 23 112 L32 112 Q33 96 31 80 Z" fill="#2a2a2a"/>
-      <path id="b-isquios-d" d="M47 80 Q50 96 47 112 L38 112 Q37 96 39 80 Z" fill="#2a2a2a"/>
-      <path id="b-gemelos-i" d="M24 114 Q21 124 24 134 L32 134 Q33 124 31 114 Z" fill="#2a2a2a"/>
-      <path id="b-gemelos-d" d="M46 114 Q49 124 46 134 L38 134 Q37 124 39 114 Z" fill="#2a2a2a"/>
-    </svg><span>Espalda</span></div>
+      <div class="heatcap-top">MODELO VIRTUAL · MAPA TÉRMICO</div>
+      <svg viewBox="0 0 70 150" id="skelSvg">
+        <g stroke="#55585c" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".55">
+          <path d="M35 24 L35 70"/>
+          <path d="M35 28 L20 28 L13 48 L10 66"/>
+          <path d="M35 28 L50 28 L57 48 L60 66"/>
+          <path d="M35 70 L28 105 L26 138"/>
+          <path d="M35 70 L42 105 L44 138"/>
+        </g>
+        <circle cx="35" cy="13" r="9" fill="#3a3a3a"/>
+        <g id="chains" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <path id="chain-cuello-i" d="M35 13 L35 24" stroke="#2a2a2a" stroke-width="3"/>
+          <path id="chain-tronco-i" d="M35 24 L35 70" stroke="#2a2a2a" stroke-width="3"/>
+          <path id="chain-hombro-i" d="M35 24 L20 28 L13 48" stroke="#2a2a2a" stroke-width="3"/>
+          <path id="chain-hombro-d" d="M35 24 L50 28 L57 48" stroke="#2a2a2a" stroke-width="3"/>
+          <path id="chain-codo-i" d="M20 28 L13 48 L10 66" stroke="#2a2a2a" stroke-width="3"/>
+          <path id="chain-codo-d" d="M50 28 L57 48 L60 66" stroke="#2a2a2a" stroke-width="3"/>
+          <path id="chain-cadera-i" d="M35 24 L35 70 L28 105" stroke="#2a2a2a" stroke-width="3"/>
+          <path id="chain-cadera-d" d="M35 24 L35 70 L42 105" stroke="#2a2a2a" stroke-width="3"/>
+          <path id="chain-rodilla-i" d="M35 70 L28 105 L26 138" stroke="#2a2a2a" stroke-width="3"/>
+          <path id="chain-rodilla-d" d="M35 70 L42 105 L44 138" stroke="#2a2a2a" stroke-width="3"/>
+          <path id="chain-tobillo-i" d="M28 105 L26 138" stroke="#2a2a2a" stroke-width="3"/>
+          <path id="chain-tobillo-d" d="M42 105 L44 138" stroke="#2a2a2a" stroke-width="3"/>
+        </g>
+        <circle id="dot-j1" cx="-10" cy="-10" r="2.6" fill="#fff"/>
+        <circle id="dot-j2" cx="-10" cy="-10" r="2.2" fill="#ffd166"/>
+        <text id="lab-j1" x="2" y="2" font-size="7" font-weight="700" fill="#fff" text-anchor="middle">--</text>
+        <text id="lab-j2" x="2" y="2" font-size="6" font-weight="700" fill="#ffd166" text-anchor="middle">--</text>
+      </svg>
+      <div class="heatbar"><div class="heatbar-fill"></div><div class="heatbar-dot" id="heatbarDot"></div></div>
+      <div class="heatbar-lbl"><span>ACTIVACIÓN BAJA</span><span>ALTA</span></div>
+      <div class="heatmus"><strong>Primario</strong><span id="musPrim">—</span></div>
+      <div class="heatmus"><strong>Secundario</strong><span id="musSec">—</span></div>
     </div>
-    <div class="heatcap">Activación muscular (según el ejercicio)</div>
   </div>
 </div>
 <div class="stats" id="statsBox"></div>
@@ -466,42 +463,48 @@ function ang3(a,b,c){
 const vert=(a,b)=>Math.abs(Math.atan2(b[0]-a[0],b[1]-a[1]))*180/Math.PI; // 0° = tronco vertical (cervical sobre cadera)
 let poseLandmarker=null,running=false,dataLog=[],last=null,maxSpan=0,liveReps=0,romLive={};
 const REF_MAX={rodilla:90,cadera:70,tronco:40,cuello:30,codo:90,hombro:90,tobillo:40};
-/* músculo canónico -> formas del dibujo (frente f-, espalda b-) que se colorean */
-const MUSCLE_DOM={
-  cuello:['f-cuello','b-cuello'],
-  hombro:['f-deltoide-i','f-deltoide-d','b-deltoide-i','b-deltoide-d'],
-  pecho:['f-pecho'],
-  trapecio:['b-trapecio'],
-  dorsales:['b-dorsales'],
-  biceps:['f-biceps-i','f-biceps-d'],
-  triceps:['b-triceps-i','b-triceps-d'],
-  antebrazo:['f-antebrazo-i','f-antebrazo-d','b-antebrazo-i','b-antebrazo-d'],
-  abdominales:['f-abdominales'],
-  lumbares:['b-lumbares'],
-  gluteos:['b-gluteos','f-cadera'],
-  cuadriceps:['f-cuadriceps-i','f-cuadriceps-d'],
-  isquios:['b-isquios-i','b-isquios-d'],
-  gemelos:['f-gemelos-i','f-gemelos-d','b-gemelos-i','b-gemelos-d']
-};
 /* respaldo cuando el ejercicio no tiene músculos cargados (p.ej. "Otro"): se estima por la articulación que más se mueve */
 const J2MUS={cuello:['cuello'],hombro:['hombro'],codo:['biceps','triceps','antebrazo'],tronco:['abdominales','lumbares'],cadera:['gluteos','isquios'],rodilla:['cuadriceps'],tobillo:['gemelos']};
-function heatColor(v){const hue=(1-v)*215;return 'hsl('+hue.toFixed(0)+',80%,42%)';}
-function resetHeatmapColors(){Object.keys(MUSCLE_DOM).forEach(k=>MUSCLE_DOM[k].forEach(id=>{const el=document.getElementById(id);if(el)el.setAttribute('fill','#2a2a2a');}));}
-function updateHeatmap(activeJoints){
-  const dd=ejDef(),active={};
-  if(dd&&dd.mus&&dd.mus.length){
-    dd.mus.forEach(m=>{active[m]=1;});
-  }else{
-    activeJoints.forEach(k=>{
-      const r=romLive[k];if(!r)return;
-      const act=Math.max(0,Math.min(1,(r[1]-r[0])/(REF_MAX[k]||60)));
-      (J2MUS[k]||[]).forEach(m=>{active[m]=Math.max(active[m]||0,act);});
-    });
-  }
+const MUS_LABEL={cuello:'Cervicales',hombro:'Deltoides',pecho:'Pectoral',trapecio:'Trapecio',dorsales:'Dorsal ancho',biceps:'Bíceps',triceps:'Tríceps',antebrazo:'Antebrazo',abdominales:'Abdominales',lumbares:'Lumbares',gluteos:'Glúteos',cuadriceps:'Cuádriceps',isquios:'Isquiotibiales',gemelos:'Gemelos'};
+/* cadenas del esqueleto que se colorean según la(s) articulación(es) que sigue el ejercicio */
+const CHAIN_IDS={cuello:['chain-cuello-i'],tronco:['chain-tronco-i'],hombro:['chain-hombro-i','chain-hombro-d'],codo:['chain-codo-i','chain-codo-d'],cadera:['chain-cadera-i','chain-cadera-d'],rodilla:['chain-rodilla-i','chain-rodilla-d'],tobillo:['chain-tobillo-i','chain-tobillo-d']};
+const JOINT_POS={cuello:[35,20],tronco:[35,47],hombro:[20,28],codo:[13,48],cadera:[35,70],rodilla:[28,105],tobillo:[26,133]};
+function heatColor(v,fase){
+  const hue=(1-v)*215;
+  return fase==='Concéntrica'?'hsl('+(hue*0.6).toFixed(0)+',90%,50%)':'hsl('+hue.toFixed(0)+',80%,42%)';
+}
+function resetHeatmapColors(){
+  Object.keys(CHAIN_IDS).forEach(k=>CHAIN_IDS[k].forEach(id=>{const el=document.getElementById(id);if(el){el.setAttribute('stroke','#2a2a2a');el.setAttribute('stroke-width','3');}}));
+  ['dot-j1','dot-j2'].forEach(id=>{const el=$(id);if(el){el.setAttribute('cx',-10);el.setAttribute('cy',-10);}});
+  ['lab-j1','lab-j2'].forEach(id=>{const el=$(id);if(el)el.setAttribute('x',-10);});
+  const bar=$('heatbarDot');if(bar)bar.style.left='0%';
+  const pEl=$('musPrim'),sEl=$('musSec');if(pEl)pEl.textContent='—';if(sEl)sEl.textContent='—';
+}
+function updateHeatmap(activeJoints,fase,speed,angles){
+  const dd=ejDef();
   resetHeatmapColors();
-  Object.keys(active).forEach(m=>{
-    (MUSCLE_DOM[m]||[]).forEach(id=>{const el=document.getElementById(id);if(el)el.setAttribute('fill',heatColor(active[m]));});
+  let sum=0,n=0;
+  activeJoints.forEach((k,ix)=>{
+    const r=romLive[k];
+    const romAct=r?Math.max(0,Math.min(1,(r[1]-r[0])/(REF_MAX[k]||60))):0;
+    const spdAct=Math.max(0,Math.min(1,(speed||0)/120));
+    const act=Math.max(romAct,spdAct);
+    sum+=act;n++;
+    (CHAIN_IDS[k]||[]).forEach(id=>{const el=document.getElementById(id);if(el){el.setAttribute('stroke',heatColor(act,fase));el.setAttribute('stroke-width',(3+act*2.5).toFixed(1));}});
+    const pos=JOINT_POS[k]||[35,70],dot=$('dot-j'+(ix+1)),lab=$('lab-j'+(ix+1));
+    if(dot){dot.setAttribute('cx',pos[0]);dot.setAttribute('cy',pos[1]);}
+    if(lab){lab.setAttribute('x',pos[0]);lab.setAttribute('y',pos[1]-4);if(angles&&angles[k]!=null)lab.textContent=angles[k].toFixed(0)+'°';}
   });
+  const dotEl=$('dot-j2'),labEl=$('lab-j2');
+  if(activeJoints.length<2&&dotEl){dotEl.setAttribute('cx',-10);dotEl.setAttribute('cy',-10);if(labEl)labEl.setAttribute('x',-10);}
+  const avg=n?sum/n:0,bar=$('heatbarDot');if(bar)bar.style.left=(avg*100).toFixed(0)+'%';
+  const prim=(dd&&dd.mus&&dd.mus.length)?dd.mus:[].concat.apply([],activeJoints.map(k=>J2MUS[k]||[]));
+  const primSet={};prim.forEach(m=>primSet[m]=1);
+  const sec=[].concat.apply([],activeJoints.map(k=>J2MUS[k]||[])).filter(m=>!primSet[m]);
+  const uniq=a=>a.filter((v,i)=>a.indexOf(v)===i);
+  const pEl=$('musPrim'),sEl=$('musSec');
+  if(pEl)pEl.textContent=prim.length?uniq(prim).map(m=>MUS_LABEL[m]||m).join(' · '):'—';
+  if(sEl)sEl.textContent=sec.length?uniq(sec).map(m=>MUS_LABEL[m]||m).join(' · '):'—';
 }
 
 function buildStats(){
@@ -591,9 +594,9 @@ function loop(){
       etiqueta(a[k].toFixed(0)+'°',q[0]+fs*0.6,q[1]-fs*0.3+(cerca?fs*1.1:0),fs,ix?'#ffd166':'#fff');
       const r=romLive[k]||(romLive[k]=[a[k],a[k]]);r[0]=Math.min(r[0],a[k]);r[1]=Math.max(r[1],a[k]);
     });
-    updateHeatmap(dd.j);
-    const k0=Math.max(0,n-5),slope=a[dd.j[0]]-dataLog[k0].a[dd.j[0]];
+    const k0=Math.max(0,n-5),slope=a[dd.j[0]]-dataLog[k0].a[dd.j[0]],dtk=dataLog[n-1].t-dataLog[k0].t;
     const fase=Math.abs(slope)<2?'Pausa':((dd.d==='ext')===(slope>0)?'Concéntrica':'Excéntrica');
+    updateHeatmap(dd.j,fase,dtk>0?Math.abs(slope)/dtk:0,a);
     if(n>10&&n%5===0)liveReps=pares(extremos(dataLog.map(x=>x.a[dd.j[0]]),dataLog.map(x=>x.t),15),dd).length;
     const alt=parseFloat($('altura').value);let vTxt='';
     if(alt&&n>=3&&maxSpan>0){const q0=dataLog[n-3],q1=dataLog[n-1],dt=q1.t-q0.t;
