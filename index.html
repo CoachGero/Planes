@@ -1527,11 +1527,35 @@ function pgNav(p){
 function pgNewSess(){return {name:'',blocks:[]};}
 function pgNewWeek(ns){var s=[];for(var i=0;i<ns;i++)s.push(pgNewSess());return {sessions:s};}
 function pgNewMonth(nw,ns){var w=[];for(var i=0;i<nw;i++)w.push(pgNewWeek(ns));return {focus:'',weeks:w};}
-function pgReid(o){
-  (o.sessions?[o]:o.weeks||[]).forEach(function(w){(w.sessions||[]).forEach(function(s){(s.blocks||[]).forEach(function(b){b.id=pgId();(b.items||[]).forEach(function(i){i.id=pgId();});});});});
-  return o;
+/* estructura (se comparte entre semanas del mes) vs dosificación (propia de cada semana) */
+var PG_BS=['kind','name','tipo','fmt','act','note'],PG_IS=['n','t','frac','video','f3','note'];
+function pgCloneMap(o){
+  var map={};function nid(id){return map[id]||(map[id]=pgId());}
+  var c=JSON.parse(JSON.stringify(o));
+  (c.sessions?[c]:c.weeks||[]).forEach(function(w){(w.sessions||[]).forEach(function(s){(s.blocks||[]).forEach(function(b){b.id=nid(b.id);(b.items||[]).forEach(function(i){i.id=nid(i.id);});});});});
+  return c;
 }
-function pgClone(o){return pgReid(JSON.parse(JSON.stringify(o)));}
+function pgClone(o){return pgCloneMap(o);}
+function pgOthers(month,week){return month.weeks.filter(function(w){return w!==week;});}
+function pgFindBlock(week,id){var r=null;week.sessions.forEach(function(s){s.blocks.forEach(function(b,i){if(b.id===id)r={sess:s,block:b,idx:i};});});return r;}
+function pgJ(o){return JSON.parse(JSON.stringify(o));}
+function pgPropField(c,t,o){
+  if(UI.pscope==='uno')return;
+  var p=pgCurrent(c);if(!p)return;var nv=pgNav(p),oth=pgOthers(nv.month,nv.week),l=t.getAttribute('data-pl'),f=t.getAttribute('data-pf');
+  if(l==='sess'){if(f==='name')oth.forEach(function(w){var s=w.sessions[UI.ps];if(s)s.name=o.name;});return;}
+  var S=l==='block'?PG_BS:l==='item'?PG_IS:null;if(!S||S.indexOf(f)<0||!o.id)return;
+  oth.forEach(function(w){w.sessions.forEach(function(s){s.blocks.forEach(function(b){
+    if(l==='block'&&b.id===o.id){b[f]=o[f];if(f==='act'){var ty=pgAerTypes(b);(b.items||[]).forEach(function(i){if(!ty[i.t])i.t=(ty.fondo?'fondo':'continuo');});}}
+    if(l==='item')(b.items||[]).forEach(function(i){if(i.id===o.id)i[f]=o[f];});
+  });});});
+}
+function pgDoseCopy(src,dst){
+  src.sessions.forEach(function(ss){ss.blocks.forEach(function(sb){dst.sessions.forEach(function(ds){ds.blocks.forEach(function(db){
+    if(db.id!==sb.id)return;
+    Object.keys(sb).forEach(function(k){if(k==='id'||k==='items'||PG_BS.indexOf(k)>-1)return;db[k]=pgJ(sb[k]);});
+    (sb.items||[]).forEach(function(si){(db.items||[]).forEach(function(di){if(di.id!==si.id)return;Object.keys(si).forEach(function(k){if(k==='id'||PG_IS.indexOf(k)>-1)return;di[k]=pgJ(si[k]);});});});
+  });});});});
+}
 function pgHasContent(weeks){return weeks.some(function(w){return w.sessions.some(function(s){return s.blocks.length;});});}
 function pgCounts(p){var w=0,s=0;p.months.forEach(function(m){w+=m.weeks.length;m.weeks.forEach(function(x){s+=x.sessions.length;});});return p.months.length+' meses · '+w+' semanas · '+s+' sesiones';}
 function pgFmtLine(b){
@@ -1708,7 +1732,11 @@ function pgSection(c){
     '<button type="button" class="link" data-pa="add-week">+ Agregar semana</button> <button type="button" class="link" data-pa="del-week">Quitar Semana '+(UI.pw+1)+'</button>'+
     '<div class="chips">'+sChips+'</div>'+
     '<button type="button" class="link" data-pa="add-sess">+ Agregar sesión</button> <button type="button" class="link" data-pa="del-sess">Quitar Sesión '+(UI.ps+1)+'</button>'+
-    '<p class="legend" style="margin-top:8px">Copiar: <button type="button" class="link" data-pa="copy-week">semana anterior aquí</button> · <button type="button" class="link" data-pa="week-month">esta semana a todo el mes</button> · <button type="button" class="link" data-pa="copy-month">mes anterior aquí</button></p>'+
+    '<div class="block" style="margin:10px 0"><p class="legend" style="margin:0 0 6px"><strong>Cómo se repite el trabajo</strong></p>'+
+    '<p class="legend" style="margin:0 0 6px">Los ejercicios y bloques que armás se repiten en todas las semanas del mes. Lo que cambia por semana es la dosificación (reps, RIR, kg, tiempos).</p>'+
+    '<div class="chips"><button type="button" class="chip" data-pa="scope" data-v="all" aria-pressed="'+(UI.pscope!=='uno')+'">Estructura: todas las semanas</button><button type="button" class="chip" data-pa="scope" data-v="uno" aria-pressed="'+(UI.pscope==='uno')+'">Estructura: solo esta semana</button></div>'+
+    '<p class="legend" style="margin:0">Dosificación: <button type="button" class="link" data-pa="dose-prev">traer de la semana anterior</button> · <button type="button" class="link" data-pa="dose-all">repetir esta en todo el mes</button></p>'+
+    '<p class="legend" style="margin:6px 0 0">Meses: <button type="button" class="link" data-pa="copy-month">mes anterior aquí</button> · <button type="button" class="link" data-pa="fill-prog">este mes a todos los siguientes</button></p></div>'+
     '<h2 class="dayh">Mes '+(UI.pm+1)+' · Semana '+(UI.pw+1)+' · Sesión '+(UI.ps+1)+'</h2>'+
     '<label class="fld">Nombre de la sesión (opcional)<input type="text" data-pl="sess" data-pf="name" value="'+esc(sess.name)+'" placeholder="ej. Piernas, Aeróbico largo, WOD"></label>'+
     (sess.blocks.length?sess.blocks.map(pgBlockEdit).join(''):'<p class="empty">Sin bloques todavía. Elegí el tipo de trabajo:</p>')+
@@ -1732,14 +1760,16 @@ function pgLive(c,t){
 }
 document.addEventListener('input',function(ev){
   var t=ev.target;if(!t.getAttribute||!t.getAttribute('data-pl'))return;
-  var c=cur(),o=pgTarget(c,t);if(o){pgSet(o,t);save();pgLive(c,t);}
+  var c=cur(),o=pgTarget(c,t);if(o){pgSet(o,t);pgPropField(c,t,o);save();pgLive(c,t);}
 });
 document.addEventListener('change',function(ev){
   var t=ev.target;if(!t.getAttribute||!t.getAttribute('data-pl'))return;
   var c=cur(),o=pgTarget(c,t);if(!o)return;
-  pgSet(o,t);var pf=t.getAttribute('data-pf');
+  pgSet(o,t);pgPropField(c,t,o);var pf=t.getAttribute('data-pf');
   if(pf==='act'&&o.items){var ty=pgAerTypes(o);o.items.forEach(function(i){if(!ty[i.t])i.t=(ty.fondo?'fondo':'continuo');});}
-  if(pf==='tipo'&&o.kind==='fuerza'){var need=PG_FT_N[o.tipo]||1;while(o.items.length<need)o.items.push({id:pgId(),n:'',reps:[],rir:[],kg:'',tempo:'',note:'',video:''});}
+  if(pf==='tipo'&&o.kind==='fuerza'){var need=PG_FT_N[o.tipo]||1;var pn=pgNav(pgCurrent(c)),oth=pgOthers(pn.month,pn.week);
+    while(o.items.length<need){var ni={id:pgId(),n:'',reps:[],rir:[],kg:'',tempo:'',note:'',video:''};o.items.push(ni);
+      if(UI.pscope!=='uno')oth.forEach(function(w){var f=pgFindBlock(w,o.id);if(f)f.block.items.push(pgJ(ni));});}}
   save();if(t.tagName==='SELECT'||t.type==='checkbox')render();
 });
 document.addEventListener('click',function(ev){
@@ -1778,34 +1808,52 @@ document.addEventListener('click',function(ev){
   else if(a==='pub'){p.pub=!p.pub;}
   else if(a==='show'){p.show=!p.show;}
   else if(a==='del-prog'){if(!confirm('¿Eliminar el programa completo?'))return;c.custom=c.custom.filter(function(x){return x.id!==p.id;});UI.pg=null;}
-  else if(a==='add-month'){var lw=M[M.length-1].weeks;M.push(pgNewMonth(lw.length,lw[lw.length-1].sessions.length));UI.pm=M.length-1;UI.pw=UI.ps=0;}
+  else if(a==='scope'){UI.pscope=t.getAttribute('data-v');render();return;}
+  else if(a==='add-month'){var nm=pgCloneMap(M[M.length-1]);nm.focus='';M.push(nm);UI.pm=M.length-1;UI.pw=UI.ps=0;}
   else if(a==='del-month'){if(M.length<2)return;if(!confirm('¿Quitar el Mes '+(UI.pm+1)+' con todo su contenido?'))return;M.splice(UI.pm,1);}
-  else if(a==='add-week'){var ws=nv.month.weeks;ws.push(pgNewWeek(ws[ws.length-1].sessions.length));UI.pw=ws.length-1;UI.ps=0;}
+  else if(a==='add-week'){var ws=nv.month.weeks;ws.push(pgJ(ws[ws.length-1]));UI.pw=ws.length-1;UI.ps=0;}
   else if(a==='del-week'){if(nv.month.weeks.length<2)return;if(!confirm('¿Quitar esta semana?'))return;nv.month.weeks.splice(UI.pw,1);}
-  else if(a==='add-sess'){nv.week.sessions.push(pgNewSess());UI.ps=nv.week.sessions.length-1;}
-  else if(a==='del-sess'){if(nv.week.sessions.length<2)return;if(!confirm('¿Quitar esta sesión?'))return;nv.week.sessions.splice(UI.ps,1);}
-  else if(a==='copy-week'){
-    var src=UI.pw>0?nv.month.weeks[UI.pw-1]:(UI.pm>0?M[UI.pm-1].weeks[M[UI.pm-1].weeks.length-1]:null);
-    if(!src){toast('No hay una semana anterior');return;}
-    if(pgHasContent([nv.week])&&!confirm('Esto reemplaza lo cargado en esta semana. ¿Seguir?'))return;
-    nv.month.weeks[UI.pw]=pgClone(src);
+  else if(a==='add-sess'){var ws2=UI.pscope==='uno'?[nv.week]:nv.month.weeks;ws2.forEach(function(w){w.sessions.push(pgNewSess());});UI.ps=nv.week.sessions.length-1;}
+  else if(a==='del-sess'){if(nv.week.sessions.length<2)return;if(!confirm(UI.pscope==='uno'?'¿Quitar esta sesión de esta semana?':'¿Quitar esta sesión de todas las semanas del mes?'))return;(UI.pscope==='uno'?[nv.week]:nv.month.weeks).forEach(function(w){if(w.sessions.length>1)w.sessions.splice(UI.ps,1);});}
+  else if(a==='dose-prev'){
+    if(UI.pw<1){toast('Esta es la primera semana del mes');return;}
+    if(!confirm('Esto reemplaza la dosificación de esta semana con la de la anterior. ¿Seguir?'))return;
+    pgDoseCopy(nv.month.weeks[UI.pw-1],nv.week);
   }
-  else if(a==='week-month'){
+  else if(a==='dose-all'){
     if(nv.month.weeks.length<2){toast('El mes tiene una sola semana');return;}
-    if(!confirm('Esto copia esta semana sobre las demás semanas del mes. ¿Seguir?'))return;
-    nv.month.weeks=nv.month.weeks.map(function(w,i){return i===UI.pw?w:pgClone(nv.week);});
+    if(!confirm('Esto copia la dosificación de esta semana a todas las demás del mes. ¿Seguir?'))return;
+    pgOthers(nv.month,nv.week).forEach(function(w){pgDoseCopy(nv.week,w);});
+  }
+  else if(a==='fill-prog'){
+    if(M.length<2){toast('El programa tiene un solo mes');return;}
+    if(!confirm('Esto reemplaza todos los meses siguientes por una copia de este. ¿Seguir?'))return;
+    for(var mi=UI.pm+1;mi<M.length;mi++){var fcs=M[mi].focus;M[mi]=pgCloneMap(nv.month);M[mi].focus=fcs;}
   }
   else if(a==='copy-month'){
     if(UI.pm<1){toast('No hay un mes anterior');return;}
     if(pgHasContent(nv.month.weeks)&&!confirm('Esto reemplaza todo el Mes '+(UI.pm+1)+'. ¿Seguir?'))return;
     var f=nv.month.focus;M[UI.pm]=pgClone(M[UI.pm-1]);M[UI.pm].focus=f;
   }
-  else if(a==='add-block'){var k=t.getAttribute('data-kind');blocks.push({id:pgId(),kind:k,name:'',tipo:'simple',scheme:'',act:'Running',goal:'',sets:'',macro:'',fmt:'amrap',dur:'',work:'',rest:'',note:'',rounds:k==='fuerza'?'4':'',items:k==='fuerza'?[{id:pgId(),n:'',reps:[],rir:[],kg:'',tempo:'',note:'',video:''}]:[]});}
-  else if(a==='del-block'){blocks.splice(bi,1);}
-  else if(a==='up'&&bi>0){blocks.splice(bi-1,0,blocks.splice(bi,1)[0]);}
-  else if(a==='down'&&bi<blocks.length-1){blocks.splice(bi+1,0,blocks.splice(bi,1)[0]);}
-  else if(a==='add-it'){var bk=blocks[bi];bk.items.push(bk.kind==='fuerza'?{id:pgId(),n:'',reps:[],rir:[],kg:'',tempo:'',note:'',video:''}:{id:pgId(),n:'',t:(bk.kind==='aerobico'?(t.getAttribute('data-pt')==='fraccionado'?(pgAerTypes(bk).fraccionado?'fraccionado':'intervalos'):t.getAttribute('data-pt')==='continuo'?'continuo':((bk.act==='Running'||bk.act==='Cinta')?'fondo':'continuo')):''),fu:'min',frac:(t.getAttribute('data-pt')==='fraccionado'&&!pgAerTypes(bk).fraccionado?'1':''),f1:'',f2:'',f3:'',f4:'',note:'',video:''});}
-  else if(a==='del-it'){blocks[bi].items.splice(+t.getAttribute('data-pi'),1);}
+  else if(a==='add-block'){var k=t.getAttribute('data-kind');var nb={id:pgId(),kind:k,name:'',tipo:'simple',scheme:'',act:'Running',goal:'',sets:'',macro:'',fmt:'amrap',dur:'',work:'',rest:'',note:'',rounds:k==='fuerza'?'4':'',items:k==='fuerza'?[{id:pgId(),n:'',reps:[],rir:[],kg:'',tempo:'',note:'',video:''}]:[]};blocks.push(nb);
+    if(UI.pscope!=='uno')pgOthers(nv.month,nv.week).forEach(function(w){var ss=w.sessions[UI.ps];if(ss)ss.blocks.push(pgJ(nb));});}
+  else if(a==='del-block'){
+    var gone=blocks[bi];if(!gone)return;var multi=UI.pscope!=='uno'&&nv.month.weeks.length>1;
+    if(multi&&!confirm('Esto quita el bloque de todas las semanas del mes. ¿Seguir?'))return;
+    blocks.splice(bi,1);
+    if(multi)pgOthers(nv.month,nv.week).forEach(function(w){var f=pgFindBlock(w,gone.id);if(f)f.sess.blocks.splice(f.idx,1);});
+  }
+  else if((a==='up'&&bi>0)||(a==='down'&&bi<blocks.length-1)){
+    var mv=blocks[bi],d=a==='up'?-1:1;blocks.splice(bi+d,0,blocks.splice(bi,1)[0]);
+    if(UI.pscope!=='uno')pgOthers(nv.month,nv.week).forEach(function(w){var f=pgFindBlock(w,mv.id);if(f&&f.idx+d>=0&&f.idx+d<f.sess.blocks.length)f.sess.blocks.splice(f.idx+d,0,f.sess.blocks.splice(f.idx,1)[0]);});
+  }
+  else if(a==='add-it'){var bk=blocks[bi];var newIt=(bk.kind==='fuerza'?{id:pgId(),n:'',reps:[],rir:[],kg:'',tempo:'',note:'',video:''}:{id:pgId(),n:'',t:(bk.kind==='aerobico'?(t.getAttribute('data-pt')==='fraccionado'?(pgAerTypes(bk).fraccionado?'fraccionado':'intervalos'):t.getAttribute('data-pt')==='continuo'?'continuo':((bk.act==='Running'||bk.act==='Cinta')?'fondo':'continuo')):''),fu:'min',frac:(t.getAttribute('data-pt')==='fraccionado'&&!pgAerTypes(bk).fraccionado?'1':''),f1:'',f2:'',f3:'',f4:'',note:'',video:''});bk.items.push(newIt);if(UI.pscope!=='uno')pgOthers(nv.month,nv.week).forEach(function(w){var f=pgFindBlock(w,bk.id);if(f)f.block.items.push(pgJ(newIt));});}
+  else if(a==='del-it'){
+    var di=+t.getAttribute('data-pi'),bb=blocks[bi],gi=bb.items[di];if(!gi)return;var multi2=UI.pscope!=='uno'&&nv.month.weeks.length>1;
+    if(multi2&&!confirm('Esto quita el ejercicio de todas las semanas del mes. ¿Seguir?'))return;
+    bb.items.splice(di,1);
+    if(multi2)pgOthers(nv.month,nv.week).forEach(function(w){var f=pgFindBlock(w,bb.id);if(f)f.block.items=f.block.items.filter(function(x){return x.id!==gi.id;});});
+  }
   else return;
   save();render();
 });
