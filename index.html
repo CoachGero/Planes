@@ -1452,13 +1452,29 @@ function scrNutri(c){
 /* ---------- Programas personalizados (meses > semanas > sesiones > bloques) ---------- */
 var PG_KINDS={fuerza:'Fuerza',aerobico:'Aeróbico',funcional:'Funcional / CrossFit'};
 var PG_FMT={fortime:'For time',amrap:'AMRAP',emom:'EMOM',tabata:'Tabata',hiit:'HIIT',rondas:'Por rondas'};
-var PG_FMT_F={fortime:['rounds','dur'],amrap:['dur'],emom:['dur','work'],tabata:['work','rest','rounds'],hiit:['work','rest','rounds'],rondas:['rounds','rest']};
-var PG_LBL={rounds:'Rondas',dur:'Tiempo (min)',work:'Trabajo (seg)',rest:'Descanso (seg)'};
+var PG_FMT_F={fortime:['rounds','dur','goal'],amrap:['dur','goal'],emom:['dur','work','goal'],tabata:['work','rest','rounds','goal'],hiit:['work','rest','rounds','sets','macro','goal'],rondas:['rounds','rest','goal']};
+var PG_LBL={rounds:'Rondas',dur:'Tiempo (min)',work:'Trabajo (seg)',rest:'Pausa (seg)',sets:'Series',macro:'Macropausa entre series (seg)',goal:'Objetivo (ej. 5 vueltas)'};
 var PG_IT={
   fuerza:[['f1','Series'],['f2','Reps'],['f3','RIR'],['f4','Carga / kg']],
-  aerobico:[['f1','Tiempo (min)'],['f2','Distancia'],['f3','Intensidad (zona, RPE, ritmo)'],['f4','Resistencia / inclinación']],
-  funcional:[['f1','Reps / cal / metros'],['f2','Carga']]
+  funcional:[['f1','Reps / cal / metros'],['f2','Kg objetivo'],['f3','Minuto / estación (opcional)'],['f4','Escala o alternativa']]
 };
+/* aeróbico: actividad del bloque + tipo de trabajo de cada parte */
+var PG_ACT=['Running','Cinta','Bicicleta fija','Assault bike','Remo ergómetro','Elíptico','Escaladora','Ski erg','Soga','Natación','Otra'];
+var PG_AT_RUN={fondo:'Fondo',semifondo:'Semifondo',continuo:'Continuo',fraccionado:'Fraccionado',pasadas:'Pasadas',alargues:'Alargues',fartlek:'Fartlek',cuestas:'Cuestas',libre:'Libre (todos los campos)'};
+var PG_AT_MAQ={continuo:'Continuo',intervalos:'Intervalos',libre:'Libre (todos los campos)'};
+var AL={km:'Km objetivo',tiempo:'Tiempo total (min)',ritmo:'Ritmo / zona',fc:'FC / RPE',series:'Series',reps:'Repeticiones',dist:'Distancia o tiempo de cada repetición',alta:'Tiempo / ritmo alta frecuencia',baja:'Tiempo / ritmo baja frecuencia',micro:'Micropausa (entre repeticiones)',macro:'Macropausa (entre series)',res:'Resistencia / inclinación'};
+var AS={km:'Km obj.',tiempo:'Tiempo',ritmo:'Ritmo',fc:'FC/RPE',series:'Series',reps:'Reps',dist:'Cada rep',alta:'Alta frec.',baja:'Baja frec.',micro:'Micropausa',macro:'Macropausa',res:'Resist./incl.'};
+var PG_AF={
+  fondo:['km','tiempo','ritmo','fc'],semifondo:['km','tiempo','ritmo','fc'],continuo:['tiempo','km','ritmo','fc','res'],
+  fraccionado:['series','reps','dist','alta','baja','micro','macro','km'],
+  pasadas:['series','reps','dist','ritmo','micro','macro'],
+  alargues:['reps','dist','ritmo','baja','micro'],
+  fartlek:['tiempo','alta','baja','reps','km'],
+  cuestas:['series','reps','dist','micro','macro'],
+  intervalos:['series','reps','alta','baja','micro','macro','res'],
+  libre:['km','tiempo','ritmo','fc','series','reps','dist','alta','baja','micro','macro','res']
+};
+function pgAerTypes(b){return (b.act==='Running'||b.act==='Cinta')?PG_AT_RUN:PG_AT_MAQ;}
 var PG_MACH=['Cinta','Bicicleta fija','Assault bike','Remo ergómetro','Elíptico','Escaladora','Ski erg','Salida a correr','Soga','Natación'];
 function pgId(){return 'x'+Math.random().toString(36).slice(2,9);}
 function pgList(c,onlyPub){return (c.custom||[]).filter(function(p){return !onlyPub||p.pub||p.show;});}
@@ -1494,21 +1510,24 @@ function pgFmtLine(b){
     if(f==='rounds')out.push(v+' rondas');
     else if(f==='dur')out.push((b.fmt==='fortime'?'time cap ':'')+v+' min');
     else if(f==='work')out.push(b.fmt==='emom'?'cada '+v+' seg':v+' seg de trabajo');
-    else if(f==='rest')out.push(v+' seg de descanso');
+    else if(f==='rest')out.push(v+' seg de pausa');
+    else if(f==='sets')out.push(v+' series');
+    else if(f==='macro')out.push('macropausa '+v+' seg');
+    else if(f==='goal')out.push('objetivo: '+v);
   });
   return out.filter(Boolean).join(' · ');
 }
-function pgItemLine(kind,it){
+function pgItemLine(kind,it,blk){
   var v=function(k){return String(it[k]==null?'':it[k]).trim();},o=[];
   if(kind==='fuerza'){if(v('f1'))o.push(v('f1')+' series');if(v('f2'))o.push(v('f2')+' reps');if(v('f3'))o.push('RIR '+v('f3'));if(v('f4'))o.push(v('f4')+(/^[\d.,]+$/.test(v('f4'))?' kg':''));}
-  else if(kind==='aerobico'){if(v('f1'))o.push(v('f1')+' min');if(v('f2'))o.push(v('f2'));if(v('f3'))o.push(v('f3'));if(v('f4'))o.push(v('f4'));}
-  else{if(v('f1'))o.push(v('f1'));if(v('f2'))o.push(v('f2'));}
+  else if(kind==='aerobico'){(PG_AF[it.t]||PG_AF.continuo).forEach(function(k){if(v(k))o.push(AS[k]+' '+v(k));});}
+  else{if(v('f1'))o.push(v('f1'));if(v('f2'))o.push('Kg obj. '+v('f2')+(/^[\d.,]+$/.test(v('f2'))?' kg':''));if(v('f3'))o.push(v('f3'));if(v('f4'))o.push('Escala: '+v('f4'));}
   return o.join(' · ');
 }
 function pgBlockView(b){
-  var head=(PG_KINDS[b.kind]||'Bloque')+(b.name?' · '+esc(b.name):''),fl=pgFmtLine(b);
+  var head=(PG_KINDS[b.kind]||'Bloque')+(b.kind==='aerobico'&&b.act?' · '+esc(b.act):'')+(b.name?' · '+esc(b.name):''),fl=pgFmtLine(b);
   var items=(b.items||[]).map(function(it){
-    return '<div class="ex"><h3>'+esc(it.n||'Sin nombre')+'</h3>'+(pgItemLine(b.kind,it)?'<p class="cue">'+esc(pgItemLine(b.kind,it))+'</p>':'')+
+    return '<div class="ex"><h3>'+(b.kind==='aerobico'&&it.t?'<span class="badge">'+esc(pgAerTypes(b)[it.t]||it.t)+'</span> ':'')+esc(it.n||(b.kind==='aerobico'?'':'Sin nombre'))+'</h3>'+(pgItemLine(b.kind,it)?'<p class="cue">'+esc(pgItemLine(b.kind,it))+'</p>':'')+
       (it.note?'<p class="legend">'+esc(it.note)+'</p>':'')+
       (it.video?'<a class="link" href="'+esc(it.video)+'" target="_blank" rel="noopener">Ver video</a>':'')+'</div>';
   }).join('');
@@ -1520,22 +1539,29 @@ function pgBlockEdit(b,bi){
   if(b.kind==='funcional'){
     h+='<label class="fld">Formato<select data-pl="block" data-pb="'+bi+'" data-pf="fmt">'+Object.keys(PG_FMT).map(function(k){return '<option value="'+k+'"'+(k===b.fmt?' selected':'')+'>'+PG_FMT[k]+'</option>';}).join('')+'</select></label>';
     var fs=PG_FMT_F[b.fmt]||[];
-    h+='<div class="rounds" style="grid-template-columns:repeat('+fs.length+',minmax(0,1fr))">'+fs.map(function(f){
+    h+='<div class="rounds" style="grid-template-columns:repeat(2,minmax(0,1fr))">'+fs.map(function(f){
       var lab=PG_LBL[f];if(f==='dur'&&b.fmt==='fortime')lab='Time cap (min)';if(f==='work'&&b.fmt==='emom')lab='Cada (seg)';
-      return '<label class="fld"><span>'+lab+'</span><input type="text" inputmode="numeric" data-pl="block" data-pb="'+bi+'" data-pf="'+f+'" value="'+esc(b[f])+'"></label>';
+      return '<label class="fld"><span>'+lab+'</span><input type="text" inputmode="'+(f==='goal'?'text':'numeric')+'" data-pl="block" data-pb="'+bi+'" data-pf="'+f+'" value="'+esc(b[f])+'"></label>';
     }).join('')+'</div>';
+  }
+  if(b.kind==='aerobico'){
+    h+='<label class="fld">Actividad<select data-pl="block" data-pb="'+bi+'" data-pf="act">'+PG_ACT.map(function(k){return '<option value="'+k+'"'+(k===b.act?' selected':'')+'>'+k+'</option>';}).join('')+'</select></label>';
   }
   h+='<label class="fld">Indicación del bloque<input type="text" data-pl="block" data-pb="'+bi+'" data-pf="note" value="'+esc(b.note)+'"></label>';
   var fields=PG_IT[b.kind]||PG_IT.fuerza;
   h+=(b.items||[]).map(function(it,ii){
     var at='data-pl="item" data-pb="'+bi+'" data-pi="'+ii+'"';
-    return '<section class="ex edit"><label class="fld">'+(b.kind==='aerobico'?'Máquina / actividad':'Ejercicio')+'<input type="text" '+at+' data-pf="n" value="'+esc(it.n)+'"'+(b.kind==='aerobico'?' list="dl-mach"':'')+'></label>'+
-      '<div class="rounds" style="grid-template-columns:repeat(2,minmax(0,1fr))">'+fields.map(function(f){return '<label class="fld"><span>'+f[1]+'</span><input type="text" '+at+' data-pf="'+f[0]+'" value="'+esc(it[f[0]])+'"></label>';}).join('')+'</div>'+
+    var fl2=fields;
+    if(b.kind==='aerobico'){fl2=(PG_AF[it.t]||PG_AF.continuo).map(function(k){return [k,AL[k]];});}
+    return '<section class="ex edit">'+
+      (b.kind==='aerobico'?'<label class="fld">Tipo de trabajo<select '+at+' data-pf="t">'+Object.keys(pgAerTypes(b)).map(function(k){return '<option value="'+k+'"'+(k===it.t?' selected':'')+'>'+pgAerTypes(b)[k]+'</option>';}).join('')+'</select></label>':'')+
+      '<label class="fld">'+(b.kind==='aerobico'?'Descripción (opcional)':'Ejercicio')+'<input type="text" '+at+' data-pf="n" value="'+esc(it.n)+'"></label>'+
+      '<div class="rounds" style="grid-template-columns:repeat(2,minmax(0,1fr))">'+fl2.map(function(f){return '<label class="fld"><span>'+f[1]+'</span><input type="text" '+at+' data-pf="'+f[0]+'" value="'+esc(it[f[0]])+'"></label>';}).join('')+'</div>'+
       '<label class="fld">Indicación<input type="text" '+at+' data-pf="note" value="'+esc(it.note)+'"></label>'+
       '<label class="fld">Video (link)<input type="url" inputmode="url" placeholder="https://" '+at+' data-pf="video" value="'+esc(it.video)+'"></label>'+
       '<button type="button" class="link" data-pa="del-it" data-pb="'+bi+'" data-pi="'+ii+'">Quitar</button></section>';
   }).join('');
-  h+='<button type="button" class="btn ghost wide" data-pa="add-it" data-pb="'+bi+'">Agregar '+(b.kind==='aerobico'?'máquina / actividad':'ejercicio')+'</button>'+
+  h+='<button type="button" class="btn ghost wide" data-pa="add-it" data-pb="'+bi+'">Agregar '+(b.kind==='aerobico'?'trabajo':'ejercicio')+'</button>'+
     '<button type="button" class="link" data-pa="up" data-pb="'+bi+'">Subir bloque</button> <button type="button" class="link" data-pa="down" data-pb="'+bi+'">Bajar bloque</button> <button type="button" class="link" data-pa="del-block" data-pb="'+bi+'">Quitar bloque</button></section>';
   return h;
 }
@@ -1585,7 +1611,8 @@ function pgSection(c){
     '<h2 class="dayh">Mes '+(UI.pm+1)+' · Semana '+(UI.pw+1)+' · Sesión '+(UI.ps+1)+'</h2>'+
     '<label class="fld">Nombre de la sesión (opcional)<input type="text" data-pl="sess" data-pf="name" value="'+esc(sess.name)+'" placeholder="ej. Piernas, Aeróbico largo, WOD"></label>'+
     (sess.blocks.length?sess.blocks.map(pgBlockEdit).join(''):'<p class="empty">Sin bloques todavía. Elegí el tipo de trabajo:</p>')+
-    '<div class="r3"><button type="button" class="btn ghost" data-pa="add-block" data-kind="fuerza">+ Fuerza</button><button type="button" class="btn ghost" data-pa="add-block" data-kind="aerobico">+ Aeróbico</button><button type="button" class="btn ghost" data-pa="add-block" data-kind="funcional">+ Funcional</button></div>';
+    '<div class="r3"><button type="button" class="btn ghost" data-pa="add-block" data-kind="fuerza">+ Fuerza</button><button type="button" class="btn ghost" data-pa="add-block" data-kind="aerobico">+ Aeróbico</button><button type="button" class="btn ghost" data-pa="add-block" data-kind="funcional">+ Funcional</button></div>'+
+    '<button type="button" class="btn wide" data-pa="send">Terminé: cargar programa en la cuenta de '+esc(c.first)+'</button>';
   return h;
 }
 function pgTarget(c,el){
@@ -1600,7 +1627,9 @@ document.addEventListener('input',function(ev){
 });
 document.addEventListener('change',function(ev){
   var t=ev.target;if(!t.getAttribute||!t.getAttribute('data-pl'))return;
-  var o=pgTarget(cur(),t);if(o){o[t.getAttribute('data-pf')]=t.value;save();if(t.tagName==='SELECT')render();}
+  var o=pgTarget(cur(),t);if(o){o[t.getAttribute('data-pf')]=t.value;
+    if(t.getAttribute('data-pf')==='act'&&o.items){var ty=pgAerTypes(o);o.items.forEach(function(i){if(!ty[i.t])i.t=(ty.fondo?'fondo':'continuo');});}
+    save();if(t.tagName==='SELECT')render();}
 });
 document.addEventListener('click',function(ev){
   var t=ev.target.closest&&ev.target.closest('[data-pa]');if(!t)return;
@@ -1634,7 +1663,8 @@ document.addEventListener('click',function(ev){
   }
   p=pgCurrent(c);if(!p)return;nv=pgNav(p);
   var blocks=nv.sess.blocks,bi=+t.getAttribute('data-pb'),M=p.months;
-  if(a==='pub'){p.pub=!p.pub;}
+  if(a==='send'){p.show=true;if(!String(p.price||'').trim())p.pub=true;toast(p.pub?'Programa cargado y habilitado en la cuenta de '+c.first:'Programa visible para '+c.first+' con su precio; habilitalo cuando pague');}
+  else if(a==='pub'){p.pub=!p.pub;}
   else if(a==='show'){p.show=!p.show;}
   else if(a==='del-prog'){if(!confirm('¿Eliminar el programa completo?'))return;c.custom=c.custom.filter(function(x){return x.id!==p.id;});UI.pg=null;}
   else if(a==='add-month'){var lw=M[M.length-1].weeks;M.push(pgNewMonth(lw.length,lw[lw.length-1].sessions.length));UI.pm=M.length-1;UI.pw=UI.ps=0;}
@@ -1659,18 +1689,18 @@ document.addEventListener('click',function(ev){
     if(pgHasContent(nv.month.weeks)&&!confirm('Esto reemplaza todo el Mes '+(UI.pm+1)+'. ¿Seguir?'))return;
     var f=nv.month.focus;M[UI.pm]=pgClone(M[UI.pm-1]);M[UI.pm].focus=f;
   }
-  else if(a==='add-block'){var k=t.getAttribute('data-kind');blocks.push({id:pgId(),kind:k,name:'',fmt:'amrap',dur:'',rounds:'',work:'',rest:'',note:'',items:[]});}
+  else if(a==='add-block'){var k=t.getAttribute('data-kind');blocks.push({id:pgId(),kind:k,name:'',act:'Running',goal:'',sets:'',macro:'',fmt:'amrap',dur:'',rounds:'',work:'',rest:'',note:'',items:[]});}
   else if(a==='del-block'){blocks.splice(bi,1);}
   else if(a==='up'&&bi>0){blocks.splice(bi-1,0,blocks.splice(bi,1)[0]);}
   else if(a==='down'&&bi<blocks.length-1){blocks.splice(bi+1,0,blocks.splice(bi,1)[0]);}
-  else if(a==='add-it'){var bk=blocks[bi];bk.items.push(bk.kind==='fuerza'?{id:pgId(),n:'',f1:'4',f2:'10',f3:'2',f4:'',note:'',video:''}:{id:pgId(),n:'',f1:'',f2:'',f3:'',f4:'',note:'',video:''});}
+  else if(a==='add-it'){var bk=blocks[bi];bk.items.push(bk.kind==='fuerza'?{id:pgId(),n:'',f1:'4',f2:'10',f3:'2',f4:'',note:'',video:''}:{id:pgId(),n:'',t:(bk.kind==='aerobico'?((bk.act==='Running'||bk.act==='Cinta')?'fondo':'continuo'):''),f1:'',f2:'',f3:'',f4:'',note:'',video:''});}
   else if(a==='del-it'){blocks[bi].items.splice(+t.getAttribute('data-pi'),1);}
   else return;
   save();render();
 });
 
 function scrProgs(c){
-  var head='<h1>Programas</h1><p class="sub">'+(UI.role==='alumno'?'Tu programa a medida y los que compres se habilitan en tu usuario.':'Armá un programa a medida para '+esc(c.first)+' o habilitá uno estándar.')+'</p>'+clientBar(c);
+  var head='<h1>Programas</h1><p class="sub">'+(UI.role==='alumno'?'Tu programa a medida, armado por tu entrenador.':'Armá un programa a medida para '+esc(c.first)+'.')+'</p>'+clientBar(c);
   var items=PROGRAMS.map(function(p){
     var on=c.unlocked.indexOf(p.id)>-1;
     if(UI.role==='trainer'){
@@ -1683,7 +1713,7 @@ function scrProgs(c){
     return '<li class="prog"><div><h3>'+esc(p.name)+'</h3><p>'+esc(p.desc)+'</p><button type="button" class="btn small go" data-act="buy" data-id="'+p.id+'">Consultar / pagar</button></div></li>';
   }).join('');
   var note=UI.role==='trainer'?'<p class="legend" style="margin-top:12px">Cuando un alumno te paga, habilitale el programa con el interruptor.</p>':'';
-  return head+pgSection(c)+'<h2 class="dayh">Programas estándar de 12 meses</h2>'+note+'<ul class="list" style="margin-top:8px">'+items+'</ul>';
+  return head+pgSection(c);
 }
 
 /* ---------- Test de movimiento (página extra, aislada en un iframe) ---------- */
