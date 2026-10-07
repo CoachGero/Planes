@@ -239,11 +239,20 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
   label.f{display:block;font-size:12px;color:var(--muted);margin-bottom:10px;}
   .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
   .wrap{position:relative;}
-  .heatpanel{position:absolute;right:8px;bottom:8px;width:104px;background:rgba(10,10,10,.82);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:6px 7px 7px;z-index:5;transition:width .2s,height .2s;overflow:hidden;}
+  .heatpanel{position:absolute;right:8px;bottom:8px;width:172px;background:rgba(10,10,10,.85);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:6px 7px 7px;z-index:5;transition:width .2s,height .2s;overflow:hidden;}
   .heatpanel.collapsed{width:26px;height:26px;padding:0;}
   .heatpanel.collapsed .heatbody{display:none;}
   .heatcap-top{font-size:6px;letter-spacing:.05em;color:#999;text-align:center;margin-bottom:3px;}
-  #skelSvg{width:100%;height:auto;display:block;}
+  .figs{display:flex;gap:4px;justify-content:center;}
+  .fig{flex:1;min-width:0;}
+  .figlbl{font-size:5.5px;letter-spacing:.08em;color:#8a8d92;text-align:center;margin-bottom:1px;transition:color .2s;}
+  .fig.dom .figlbl{color:#ffd166;font-weight:700;}
+  .figsvg{width:100%;height:auto;display:block;transition:opacity .2s;}
+  .figsvg .mu{fill:#555a60;stroke:#16181b;stroke-width:.6;transition:fill .12s;}
+  .angline{font-size:7px;color:#fff;font-weight:700;text-align:center;margin-top:3px;min-height:9px;}
+  .domline{font-size:6px;color:#ffd166;text-align:center;letter-spacing:.04em;}
+  .legend{display:flex;justify-content:space-between;gap:3px;font-size:5.5px;color:#bbb;margin-top:4px;}
+  .legend i{display:inline-block;width:8px;height:5px;border-radius:2px;margin-right:2px;vertical-align:middle;}
   .heatbar{position:relative;height:5px;border-radius:3px;margin-top:4px;background:linear-gradient(90deg,hsl(215,80%,42%),hsl(120,80%,42%),hsl(50,80%,42%),hsl(0,80%,42%));}
   .heatbar-dot{position:absolute;top:-2px;width:9px;height:9px;border-radius:50%;background:#fff;border:2px solid #111;transform:translateX(-50%);left:0%;transition:left .15s linear;}
   .heatbar-lbl{display:flex;justify-content:space-between;font-size:5.5px;color:#999;margin-top:2px;letter-spacing:.02em;}
@@ -315,38 +324,15 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
     <button type="button" class="heatclose" id="heatToggle" title="Mostrar/ocultar">—</button>
     <div class="heatbody">
       <div class="heatcap-top">MODELO VIRTUAL · MAPA TÉRMICO</div>
-      <svg viewBox="0 0 70 150" id="skelSvg">
-        <g stroke="#55585c" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".55">
-          <path d="M35 24 L35 70"/>
-          <path d="M35 28 L20 28 L13 48 L10 66"/>
-          <path d="M35 28 L50 28 L57 48 L60 66"/>
-          <path d="M35 70 L28 105 L26 138"/>
-          <path d="M35 70 L42 105 L44 138"/>
-        </g>
-        <circle cx="35" cy="13" r="9" fill="#3a3a3a"/>
-        <g id="chains" stroke-linecap="round" stroke-linejoin="round" fill="none">
-          <path id="chain-cuello-i" d="M35 13 L35 24" stroke="#2a2a2a" stroke-width="3"/>
-          <path id="chain-tronco-i" d="M35 24 L35 70" stroke="#2a2a2a" stroke-width="3"/>
-          <path id="chain-hombro-i" d="M35 24 L20 28 L13 48" stroke="#2a2a2a" stroke-width="3"/>
-          <path id="chain-hombro-d" d="M35 24 L50 28 L57 48" stroke="#2a2a2a" stroke-width="3"/>
-          <path id="chain-codo-i" d="M20 28 L13 48 L10 66" stroke="#2a2a2a" stroke-width="3"/>
-          <path id="chain-codo-d" d="M50 28 L57 48 L60 66" stroke="#2a2a2a" stroke-width="3"/>
-          <path id="chain-cadera-i" d="M35 24 L35 70 L28 105" stroke="#2a2a2a" stroke-width="3"/>
-          <path id="chain-cadera-d" d="M35 24 L35 70 L42 105" stroke="#2a2a2a" stroke-width="3"/>
-          <path id="chain-rodilla-i" d="M35 70 L28 105 L26 138" stroke="#2a2a2a" stroke-width="3"/>
-          <path id="chain-rodilla-d" d="M35 70 L42 105 L44 138" stroke="#2a2a2a" stroke-width="3"/>
-          <path id="chain-tobillo-i" d="M28 105 L26 138" stroke="#2a2a2a" stroke-width="3"/>
-          <path id="chain-tobillo-d" d="M42 105 L44 138" stroke="#2a2a2a" stroke-width="3"/>
-        </g>
-        <circle id="dot-j1" cx="-10" cy="-10" r="2.6" fill="#fff"/>
-        <circle id="dot-j2" cx="-10" cy="-10" r="2.2" fill="#ffd166"/>
-        <text id="lab-j1" x="2" y="2" font-size="7" font-weight="700" fill="#fff" text-anchor="middle">--</text>
-        <text id="lab-j2" x="2" y="2" font-size="6" font-weight="700" fill="#ffd166" text-anchor="middle">--</text>
-      </svg>
+      <div class="figs"><div class="fig"><div class="figlbl" id="lblF">ANTERIOR</div><svg viewBox="0 0 100 212" class="figsvg" id="fig-f"><ellipse cx="50" cy="11" rx="8.5" ry="10.5" fill="#3d4044"/><path d="M50 21 L44 22 L42 31 L36 33 L33 54 L34 98 L38 110 L50 110 Z" fill="#34373b"/><path d="M50 21 L44 22 L42 31 L36 33 L33 54 L34 98 L38 110 L50 110 Z" transform="translate(100,0) scale(-1,1)" fill="#34373b"/><path d="M25 52 L19 82 L14 114 L21 118 L30 84 L33 54 Z" fill="#34373b"/><path d="M25 52 L19 82 L14 114 L21 118 L30 84 L33 54 Z" transform="translate(100,0) scale(-1,1)" fill="#34373b"/><path d="M38 108 L34 140 L36 158 L35 196 L38 204 L44 204 L45 160 L48 130 L50 110 Z" fill="#34373b"/><path d="M38 108 L34 140 L36 158 L35 196 L38 204 L44 204 L45 160 L48 130 L50 110 Z" transform="translate(100,0) scale(-1,1)" fill="#34373b"/><ellipse cx="17" cy="121" rx="4" ry="6" fill="#3d4044"/><ellipse cx="83" cy="121" rx="4" ry="6" fill="#3d4044"/><ellipse cx="41" cy="207" rx="6" ry="3" fill="#3d4044"/><ellipse cx="59" cy="207" rx="6" ry="3" fill="#3d4044"/><ellipse cx="41" cy="156" rx="5" ry="4.5" fill="#3d4044"/><ellipse cx="59" cy="156" rx="5" ry="4.5" fill="#3d4044"/><path class="mu" data-m="cuello" d="M44 20 L50 20 L50 31 L42 31 Z"/><path class="mu" data-m="cuello" transform="translate(100,0) scale(-1,1)" d="M44 20 L50 20 L50 31 L42 31 Z"/><path class="mu" data-m="hombro" d="M38 31 C30 30 24 34 23 42 C23 48 25 52 27 55 L33 49 C34 42 36 36 38 31 Z"/><path class="mu" data-m="hombro" transform="translate(100,0) scale(-1,1)" d="M38 31 C30 30 24 34 23 42 C23 48 25 52 27 55 L33 49 C34 42 36 36 38 31 Z"/><path class="mu" data-m="pecho" d="M50 34 L50 57 C44 61 36 59 33 51 C32 44 35 38 40 34 C44 32 47 33 50 34 Z"/><path class="mu" data-m="pecho" transform="translate(100,0) scale(-1,1)" d="M50 34 L50 57 C44 61 36 59 33 51 C32 44 35 38 40 34 C44 32 47 33 50 34 Z"/><path class="mu" data-m="biceps" d="M22 53 C20 62 20 72 23 82 L31 82 C33 72 33 62 31 52 Z"/><path class="mu" data-m="biceps" transform="translate(100,0) scale(-1,1)" d="M22 53 C20 62 20 72 23 82 L31 82 C33 72 33 62 31 52 Z"/><path class="mu" data-m="antebrazo" d="M22 84 C19 94 17 104 16 114 L22 116 C25 106 29 96 31 84 Z"/><path class="mu" data-m="antebrazo" transform="translate(100,0) scale(-1,1)" d="M22 84 C19 94 17 104 16 114 L22 116 C25 106 29 96 31 84 Z"/><path class="mu" data-m="abdominales" d="M43 60 L50 60 L50 98 C47 101 44 99 43 96 Z"/><path class="mu" data-m="abdominales" transform="translate(100,0) scale(-1,1)" d="M43 60 L50 60 L50 98 C47 101 44 99 43 96 Z"/><path class="mu" data-m="abdominales" d="M39 60 C37 70 38 84 41 96 L42 96 L42 60 Z"/><path class="mu" data-m="abdominales" transform="translate(100,0) scale(-1,1)" d="M39 60 C37 70 38 84 41 96 L42 96 L42 60 Z"/><path class="mu" data-m="cuadriceps" d="M48 100 L40 100 C35 110 33 126 35 142 C36 150 40 153 44 153 C46 142 48 124 49 108 Z"/><path class="mu" data-m="cuadriceps" transform="translate(100,0) scale(-1,1)" d="M48 100 L40 100 C35 110 33 126 35 142 C36 150 40 153 44 153 C46 142 48 124 49 108 Z"/><path class="mu" data-m="gemelos" d="M37 161 C35 172 36 186 38 197 L43 197 C45 186 45 172 44 161 Z"/><path class="mu" data-m="gemelos" transform="translate(100,0) scale(-1,1)" d="M37 161 C35 172 36 186 38 197 L43 197 C45 186 45 172 44 161 Z"/><g stroke="#15171a" stroke-width=".7" fill="none" opacity=".8"><path d="M43 69H57M43 78H57M43 87H57M50 60V99"/><path d="M50 36V57M50 36" /></g></svg></div><div class="fig"><div class="figlbl" id="lblB">POSTERIOR</div><svg viewBox="0 0 100 212" class="figsvg" id="fig-b"><ellipse cx="50" cy="11" rx="8.5" ry="10.5" fill="#3d4044"/><path d="M50 21 L44 22 L42 31 L36 33 L33 54 L34 98 L38 110 L50 110 Z" fill="#34373b"/><path d="M50 21 L44 22 L42 31 L36 33 L33 54 L34 98 L38 110 L50 110 Z" transform="translate(100,0) scale(-1,1)" fill="#34373b"/><path d="M25 52 L19 82 L14 114 L21 118 L30 84 L33 54 Z" fill="#34373b"/><path d="M25 52 L19 82 L14 114 L21 118 L30 84 L33 54 Z" transform="translate(100,0) scale(-1,1)" fill="#34373b"/><path d="M38 108 L34 140 L36 158 L35 196 L38 204 L44 204 L45 160 L48 130 L50 110 Z" fill="#34373b"/><path d="M38 108 L34 140 L36 158 L35 196 L38 204 L44 204 L45 160 L48 130 L50 110 Z" transform="translate(100,0) scale(-1,1)" fill="#34373b"/><ellipse cx="17" cy="121" rx="4" ry="6" fill="#3d4044"/><ellipse cx="83" cy="121" rx="4" ry="6" fill="#3d4044"/><ellipse cx="41" cy="207" rx="6" ry="3" fill="#3d4044"/><ellipse cx="59" cy="207" rx="6" ry="3" fill="#3d4044"/><ellipse cx="41" cy="156" rx="5" ry="4.5" fill="#3d4044"/><ellipse cx="59" cy="156" rx="5" ry="4.5" fill="#3d4044"/><path class="mu" data-m="cuello" d="M44 20 L50 20 L50 31 L42 31 Z"/><path class="mu" data-m="cuello" transform="translate(100,0) scale(-1,1)" d="M44 20 L50 20 L50 31 L42 31 Z"/><path class="mu" data-m="trapecio" d="M50 24 L43 26 C38 30 34 32 30 34 L38 44 L50 68 Z"/><path class="mu" data-m="trapecio" transform="translate(100,0) scale(-1,1)" d="M50 24 L43 26 C38 30 34 32 30 34 L38 44 L50 68 Z"/><path class="mu" data-m="hombro" d="M38 31 C30 30 24 34 23 42 C23 48 25 52 27 55 L33 49 C34 42 36 36 38 31 Z"/><path class="mu" data-m="hombro" transform="translate(100,0) scale(-1,1)" d="M38 31 C30 30 24 34 23 42 C23 48 25 52 27 55 L33 49 C34 42 36 36 38 31 Z"/><path class="mu" data-m="dorsales" d="M50 68 L38 44 C34 50 32 57 33 63 C34 71 38 79 44 85 L50 83 Z"/><path class="mu" data-m="dorsales" transform="translate(100,0) scale(-1,1)" d="M50 68 L38 44 C34 50 32 57 33 63 C34 71 38 79 44 85 L50 83 Z"/><path class="mu" data-m="triceps" d="M22 53 C20 62 20 72 23 82 L31 82 C33 72 33 62 31 52 Z"/><path class="mu" data-m="triceps" transform="translate(100,0) scale(-1,1)" d="M22 53 C20 62 20 72 23 82 L31 82 C33 72 33 62 31 52 Z"/><path class="mu" data-m="antebrazo" d="M22 84 C19 94 17 104 16 114 L22 116 C25 106 29 96 31 84 Z"/><path class="mu" data-m="antebrazo" transform="translate(100,0) scale(-1,1)" d="M22 84 C19 94 17 104 16 114 L22 116 C25 106 29 96 31 84 Z"/><path class="mu" data-m="lumbares" d="M50 83 L44 85 C42 91 42 98 43 103 L50 104 Z"/><path class="mu" data-m="lumbares" transform="translate(100,0) scale(-1,1)" d="M50 83 L44 85 C42 91 42 98 43 103 L50 104 Z"/><path class="mu" data-m="gluteos" d="M50 103 L43 103 C37 105 35 113 37 121 C40 127 47 127 50 123 Z"/><path class="mu" data-m="gluteos" transform="translate(100,0) scale(-1,1)" d="M50 103 L43 103 C37 105 35 113 37 121 C40 127 47 127 50 123 Z"/><path class="mu" data-m="isquios" d="M37 126 C34 136 34 148 37 158 L45 158 C48 148 49 136 48 128 Z"/><path class="mu" data-m="isquios" transform="translate(100,0) scale(-1,1)" d="M37 126 C34 136 34 148 37 158 L45 158 C48 148 49 136 48 128 Z"/><path class="mu" data-m="gemelos" d="M36 162 C33 172 34 184 38 196 L44 196 C47 184 47 172 45 162 Z"/><path class="mu" data-m="gemelos" transform="translate(100,0) scale(-1,1)" d="M36 162 C33 172 34 184 38 196 L44 196 C47 184 47 172 45 162 Z"/><g stroke="#15171a" stroke-width=".7" fill="none" opacity=".8"><path d="M50 26V104"/></g></svg></div></div>
+      <div class="angline" id="angLive">—</div>
+      <div class="domline" id="domLine">—</div>
       <div class="heatbar"><div class="heatbar-fill"></div><div class="heatbar-dot" id="heatbarDot"></div></div>
       <div class="heatbar-lbl"><span>ACTIVACIÓN BAJA</span><span>ALTA</span></div>
-      <div class="heatmus"><strong>Primario</strong><span id="musPrim">—</span></div>
-      <div class="heatmus"><strong>Secundario</strong><span id="musSec">—</span></div>
+      <div class="legend"><span><i style="background:linear-gradient(90deg,#2b6fd6,#e23b2e)"></i>Principal</span><span><i style="background:#e0a03a"></i>Sinergista</span><span><i style="background:#9b5de5"></i>Antagonista</span></div>
+      <div class="heatmus"><strong>Principal </strong><span id="musPrim">—</span></div>
+      <div class="heatmus"><strong>Sinergistas </strong><span id="musSec">—</span></div>
+      <div class="heatmus"><strong>Antagonistas </strong><span id="musAnt">—</span></div>
     </div>
   </div>
 </div>
@@ -466,45 +452,60 @@ const REF_MAX={rodilla:90,cadera:70,tronco:40,cuello:30,codo:90,hombro:90,tobill
 /* respaldo cuando el ejercicio no tiene músculos cargados (p.ej. "Otro"): se estima por la articulación que más se mueve */
 const J2MUS={cuello:['cuello'],hombro:['hombro'],codo:['biceps','triceps','antebrazo'],tronco:['abdominales','lumbares'],cadera:['gluteos','isquios'],rodilla:['cuadriceps'],tobillo:['gemelos']};
 const MUS_LABEL={cuello:'Cervicales',hombro:'Deltoides',pecho:'Pectoral',trapecio:'Trapecio',dorsales:'Dorsal ancho',biceps:'Bíceps',triceps:'Tríceps',antebrazo:'Antebrazo',abdominales:'Abdominales',lumbares:'Lumbares',gluteos:'Glúteos',cuadriceps:'Cuádriceps',isquios:'Isquiotibiales',gemelos:'Gemelos'};
-/* cadenas del esqueleto que se colorean según la(s) articulación(es) que sigue el ejercicio */
-const CHAIN_IDS={cuello:['chain-cuello-i'],tronco:['chain-tronco-i'],hombro:['chain-hombro-i','chain-hombro-d'],codo:['chain-codo-i','chain-codo-d'],cadera:['chain-cadera-i','chain-cadera-d'],rodilla:['chain-rodilla-i','chain-rodilla-d'],tobillo:['chain-tobillo-i','chain-tobillo-d']};
-const JOINT_POS={cuello:[35,20],tronco:[35,47],hombro:[20,28],codo:[13,48],cadera:[35,70],rodilla:[28,105],tobillo:[26,133]};
+/* grupos musculares del modelo (vista anterior / posterior) */
+const FRONT_M={pecho:1,biceps:1,abdominales:1,cuadriceps:1},BACK_M={trapecio:1,dorsales:1,triceps:1,lumbares:1,gluteos:1,isquios:1};
+/* antagonistas por músculo principal */
+const ANTAG={pecho:['dorsales','trapecio'],dorsales:['pecho'],trapecio:['pecho'],hombro:['dorsales'],biceps:['triceps'],triceps:['biceps'],cuadriceps:['isquios'],isquios:['cuadriceps'],gluteos:['cuadriceps'],abdominales:['lumbares'],lumbares:['abdominales'],gemelos:[],antebrazo:[],cuello:[]};
 function heatColor(v,fase){
   const hue=(1-v)*215;
   return fase==='Concéntrica'?'hsl('+(hue*0.6).toFixed(0)+',90%,50%)':'hsl('+hue.toFixed(0)+',80%,42%)';
 }
+const MU_BASE='#555a60';
+function paintMuscle(m,color){document.querySelectorAll('.mu[data-m="'+m+'"]').forEach(e=>e.style.fill=color);}
 function resetHeatmapColors(){
-  Object.keys(CHAIN_IDS).forEach(k=>CHAIN_IDS[k].forEach(id=>{const el=document.getElementById(id);if(el){el.setAttribute('stroke','#2a2a2a');el.setAttribute('stroke-width','3');}}));
-  ['dot-j1','dot-j2'].forEach(id=>{const el=$(id);if(el){el.setAttribute('cx',-10);el.setAttribute('cy',-10);}});
-  ['lab-j1','lab-j2'].forEach(id=>{const el=$(id);if(el)el.setAttribute('x',-10);});
+  document.querySelectorAll('.mu').forEach(e=>e.style.fill='');
+  document.querySelectorAll('.fig').forEach(e=>e.classList.remove('dom'));
+  ['fig-f','fig-b'].forEach(id=>{const e=$(id);if(e)e.style.opacity='1';});
   const bar=$('heatbarDot');if(bar)bar.style.left='0%';
-  const pEl=$('musPrim'),sEl=$('musSec');if(pEl)pEl.textContent='—';if(sEl)sEl.textContent='—';
+  ['musPrim','musSec','musAnt'].forEach(id=>{const e=$(id);if(e)e.textContent='—';});
+  const al=$('angLive');if(al)al.textContent='—';const dl=$('domLine');if(dl)dl.textContent='—';
 }
 function updateHeatmap(activeJoints,fase,speed,angles){
   const dd=ejDef();
   resetHeatmapColors();
   let sum=0,n=0;
-  activeJoints.forEach((k,ix)=>{
+  activeJoints.forEach(k=>{
     const r=romLive[k];
     const romAct=r?Math.max(0,Math.min(1,(r[1]-r[0])/(REF_MAX[k]||60))):0;
     const spdAct=Math.max(0,Math.min(1,(speed||0)/120));
-    const act=Math.max(romAct,spdAct);
-    sum+=act;n++;
-    (CHAIN_IDS[k]||[]).forEach(id=>{const el=document.getElementById(id);if(el){el.setAttribute('stroke',heatColor(act,fase));el.setAttribute('stroke-width',(3+act*2.5).toFixed(1));}});
-    const pos=JOINT_POS[k]||[35,70],dot=$('dot-j'+(ix+1)),lab=$('lab-j'+(ix+1));
-    if(dot){dot.setAttribute('cx',pos[0]);dot.setAttribute('cy',pos[1]);}
-    if(lab){lab.setAttribute('x',pos[0]);lab.setAttribute('y',pos[1]-4);if(angles&&angles[k]!=null)lab.textContent=angles[k].toFixed(0)+'°';}
+    sum+=Math.max(romAct,spdAct);n++;
   });
-  const dotEl=$('dot-j2'),labEl=$('lab-j2');
-  if(activeJoints.length<2&&dotEl){dotEl.setAttribute('cx',-10);dotEl.setAttribute('cy',-10);if(labEl)labEl.setAttribute('x',-10);}
-  const avg=n?sum/n:0,bar=$('heatbarDot');if(bar)bar.style.left=(avg*100).toFixed(0)+'%';
-  const prim=(dd&&dd.mus&&dd.mus.length)?dd.mus:[].concat.apply([],activeJoints.map(k=>J2MUS[k]||[]));
-  const primSet={};prim.forEach(m=>primSet[m]=1);
-  const sec=[].concat.apply([],activeJoints.map(k=>J2MUS[k]||[])).filter(m=>!primSet[m]);
+  const act=n?sum/n:0;
+  const bar=$('heatbarDot');if(bar)bar.style.left=(act*100).toFixed(0)+'%';
   const uniq=a=>a.filter((v,i)=>a.indexOf(v)===i);
-  const pEl=$('musPrim'),sEl=$('musSec');
-  if(pEl)pEl.textContent=prim.length?uniq(prim).map(m=>MUS_LABEL[m]||m).join(' · '):'—';
-  if(sEl)sEl.textContent=sec.length?uniq(sec).map(m=>MUS_LABEL[m]||m).join(' · '):'—';
+  const prim=uniq((dd&&dd.mus&&dd.mus.length)?dd.mus:[].concat.apply([],activeJoints.map(k=>J2MUS[k]||[])));
+  const pSet={};prim.forEach(m=>pSet[m]=1);
+  const ant=uniq([].concat.apply([],prim.map(m=>ANTAG[m]||[]))).filter(m=>!pSet[m]);
+  const aSet={};ant.forEach(m=>aSet[m]=1);
+  const sec=uniq([].concat.apply([],activeJoints.map(k=>J2MUS[k]||[]))).filter(m=>!pSet[m]&&!aSet[m]);
+  /* antagonistas (violeta): intensidad menor, crece con la activación */
+  ant.forEach(m=>paintMuscle(m,'hsl(268,62%,'+(30+act*22).toFixed(0)+'%)'));
+  /* sinergistas (ámbar) */
+  sec.forEach(m=>paintMuscle(m,'hsl(36,78%,'+(32+act*20).toFixed(0)+'%)'));
+  /* principales: escala térmica azul→rojo */
+  prim.forEach(m=>paintMuscle(m,heatColor(Math.max(act,.12),fase)));
+  const pEl=$('musPrim'),sEl=$('musSec'),aEl=$('musAnt');
+  const lab=a=>a.length?a.map(m=>MUS_LABEL[m]||m).join(' · '):'—';
+  if(pEl)pEl.textContent=lab(prim);if(sEl)sEl.textContent=lab(sec);if(aEl)aEl.textContent=lab(ant);
+  const al=$('angLive');
+  if(al&&angles)al.textContent=activeJoints.map(k=>((JN[k]||k).replace(/ \(.*\)/,''))+' '+(angles[k]!=null?angles[k].toFixed(0)+'°':'--')).join(' · ');
+  /* dominancia anterior / posterior */
+  const nf=prim.filter(m=>FRONT_M[m]).length,nb=prim.filter(m=>BACK_M[m]).length;
+  const dl=$('domLine'),fF=$('fig-f'),fB=$('fig-b');
+  let dom='';
+  if(nf>nb)dom='f';else if(nb>nf)dom='b';
+  if(dl)dl.textContent=dom==='f'?'DOMINANCIA ANTERIOR':dom==='b'?'DOMINANCIA POSTERIOR':'ANTERIOR + POSTERIOR';
+  if(dom){const on=dom==='f'?fF:fB,off=dom==='f'?fB:fF;on.parentNode.classList.add('dom');off.style.opacity='.78';}
 }
 
 function buildStats(){
