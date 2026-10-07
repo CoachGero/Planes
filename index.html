@@ -1292,6 +1292,7 @@ function scrTrain(c){
     return '<h3 class="blockh">'+esc(b.name||'Bloque')+'</h3>'+(b.exercises||[]).map(function(e){return exBlock(c,w,d,e);}).join('');
   }).join('');
   return '<h1>Plan de septiembre</h1><p class="sub">'+c.plan.length+' sesión'+(c.plan.length===1?'':'es')+' por semana con PF. Gerónimo Malara</p>'+
+    memoCard(c)+
     '<div class="chips" role="group" aria-label="Semana">'+chipsW+'</div>'+
     (c.plan.length?'<div class="chips" role="group" aria-label="Sesión">'+chipsD+'</div><h2 class="dayh">Sesión '+(d+1)+'</h2>'+
       '<p class="legend">Cada ronda muestra las repeticiones, los kilos que usaste y el RIR previsto. <span id="cnt">'+done+' de '+total+'</span> rondas cargadas.</p>'+
@@ -1301,7 +1302,6 @@ function scrTrain(c){
 }
 
 function memoCard(c){
-  if(UI.role!=='trainer')return '';
   var f=fichaOf(c),br=function(t){return esc(String(t).trim()).replace(/\n/g,'<br>');};
   var les=String(f.lesiones).trim(),hist=String(f.historialLesiones).trim(),obj=String(f.objetivos).trim();
   var hayLes=/^s[ií]/i.test(les)||hist!=='';
@@ -1309,7 +1309,7 @@ function memoCard(c){
   if(hayLes)lesHtml='<div class="memo-v alert">'+(les?br(les)+(hist?'<br>':''):'')+(hist?'<span style="font-weight:400">'+br(hist)+'</span>':'')+'</div>';
   else if(les)lesHtml='<div class="memo-v">'+br(les)+'</div>';
   else lesHtml='<div class="memo-v empty">Sin cargar</div>';
-  return '<div class="memo"><div class="memo-h"><span>Ayuda memoria</span><button type="button" class="link" data-act="tab" data-v="ficha">Editar en la Ficha</button></div>'+
+  return '<div class="memo"><div class="memo-h"><span>Resumen de ficha</span><button type="button" class="link" data-act="tab" data-v="ficha">Ver / editar ficha</button></div>'+
     '<div class="memo-k">Lesiones</div>'+lesHtml+
     '<div class="memo-k">Objetivos</div>'+(obj?'<div class="memo-v">'+br(obj)+'</div>':'<div class="memo-v empty">Sin cargar</div>')+'</div>';
 }
@@ -1449,8 +1449,228 @@ function scrNutri(c){
   return head+tiles+chart+table+form;
 }
 
+/* ---------- Programas personalizados (meses > semanas > sesiones > bloques) ---------- */
+var PG_KINDS={fuerza:'Fuerza',aerobico:'Aeróbico',funcional:'Funcional / CrossFit'};
+var PG_FMT={fortime:'For time',amrap:'AMRAP',emom:'EMOM',tabata:'Tabata',hiit:'HIIT',rondas:'Por rondas'};
+var PG_FMT_F={fortime:['rounds','dur'],amrap:['dur'],emom:['dur','work'],tabata:['work','rest','rounds'],hiit:['work','rest','rounds'],rondas:['rounds','rest']};
+var PG_LBL={rounds:'Rondas',dur:'Tiempo (min)',work:'Trabajo (seg)',rest:'Descanso (seg)'};
+var PG_IT={
+  fuerza:[['f1','Series'],['f2','Reps'],['f3','RIR'],['f4','Carga / kg']],
+  aerobico:[['f1','Tiempo (min)'],['f2','Distancia'],['f3','Intensidad (zona, RPE, ritmo)'],['f4','Resistencia / inclinación']],
+  funcional:[['f1','Reps / cal / metros'],['f2','Carga']]
+};
+var PG_MACH=['Cinta','Bicicleta fija','Assault bike','Remo ergómetro','Elíptico','Escaladora','Ski erg','Salida a correr','Soga','Natación'];
+function pgId(){return 'x'+Math.random().toString(36).slice(2,9);}
+function pgList(c,onlyPub){return (c.custom||[]).filter(function(p){return !onlyPub||p.pub||p.show;});}
+function pgCurrent(c){
+  var l=pgList(c,UI.role==='alumno');
+  var p=l.filter(function(x){return x.id===UI.pg;})[0];
+  if(!p&&l.length){p=l[0];UI.pg=p.id;}
+  return p||null;
+}
+function pgNav(p){
+  UI.pm=Math.max(0,Math.min(UI.pm||0,p.months.length-1));
+  var month=p.months[UI.pm];
+  UI.pw=Math.max(0,Math.min(UI.pw||0,month.weeks.length-1));
+  var week=month.weeks[UI.pw];
+  UI.ps=Math.max(0,Math.min(UI.ps||0,week.sessions.length-1));
+  return {month:month,week:week,sess:week.sessions[UI.ps]};
+}
+function pgNewSess(){return {name:'',blocks:[]};}
+function pgNewWeek(ns){var s=[];for(var i=0;i<ns;i++)s.push(pgNewSess());return {sessions:s};}
+function pgNewMonth(nw,ns){var w=[];for(var i=0;i<nw;i++)w.push(pgNewWeek(ns));return {focus:'',weeks:w};}
+function pgReid(o){
+  (o.sessions?[o]:o.weeks||[]).forEach(function(w){(w.sessions||[]).forEach(function(s){(s.blocks||[]).forEach(function(b){b.id=pgId();(b.items||[]).forEach(function(i){i.id=pgId();});});});});
+  return o;
+}
+function pgClone(o){return pgReid(JSON.parse(JSON.stringify(o)));}
+function pgHasContent(weeks){return weeks.some(function(w){return w.sessions.some(function(s){return s.blocks.length;});});}
+function pgCounts(p){var w=0,s=0;p.months.forEach(function(m){w+=m.weeks.length;m.weeks.forEach(function(x){s+=x.sessions.length;});});return p.months.length+' meses · '+w+' semanas · '+s+' sesiones';}
+function pgFmtLine(b){
+  if(b.kind!=='funcional')return '';
+  var out=[PG_FMT[b.fmt]||''];
+  (PG_FMT_F[b.fmt]||[]).forEach(function(f){
+    var v=String(b[f]==null?'':b[f]).trim();if(!v)return;
+    if(f==='rounds')out.push(v+' rondas');
+    else if(f==='dur')out.push((b.fmt==='fortime'?'time cap ':'')+v+' min');
+    else if(f==='work')out.push(b.fmt==='emom'?'cada '+v+' seg':v+' seg de trabajo');
+    else if(f==='rest')out.push(v+' seg de descanso');
+  });
+  return out.filter(Boolean).join(' · ');
+}
+function pgItemLine(kind,it){
+  var v=function(k){return String(it[k]==null?'':it[k]).trim();},o=[];
+  if(kind==='fuerza'){if(v('f1'))o.push(v('f1')+' series');if(v('f2'))o.push(v('f2')+' reps');if(v('f3'))o.push('RIR '+v('f3'));if(v('f4'))o.push(v('f4')+(/^[\d.,]+$/.test(v('f4'))?' kg':''));}
+  else if(kind==='aerobico'){if(v('f1'))o.push(v('f1')+' min');if(v('f2'))o.push(v('f2'));if(v('f3'))o.push(v('f3'));if(v('f4'))o.push(v('f4'));}
+  else{if(v('f1'))o.push(v('f1'));if(v('f2'))o.push(v('f2'));}
+  return o.join(' · ');
+}
+function pgBlockView(b){
+  var head=(PG_KINDS[b.kind]||'Bloque')+(b.name?' · '+esc(b.name):''),fl=pgFmtLine(b);
+  var items=(b.items||[]).map(function(it){
+    return '<div class="ex"><h3>'+esc(it.n||'Sin nombre')+'</h3>'+(pgItemLine(b.kind,it)?'<p class="cue">'+esc(pgItemLine(b.kind,it))+'</p>':'')+
+      (it.note?'<p class="legend">'+esc(it.note)+'</p>':'')+
+      (it.video?'<a class="link" href="'+esc(it.video)+'" target="_blank" rel="noopener">Ver video</a>':'')+'</div>';
+  }).join('');
+  return '<h3 class="blockh">'+head+'</h3>'+(fl?'<p class="legend"><strong>'+esc(fl)+'</strong></p>':'')+(b.note?'<p class="legend">'+esc(b.note)+'</p>':'')+(items||'<p class="empty">Sin ejercicios.</p>');
+}
+function pgBlockEdit(b,bi){
+  var h='<section class="block"><p class="legend" style="margin:0 0 6px"><strong>'+esc(PG_KINDS[b.kind]||'Bloque')+'</strong></p>'+
+    '<label class="fld">Nombre del bloque<input type="text" data-pl="block" data-pb="'+bi+'" data-pf="name" value="'+esc(b.name)+'" placeholder="'+(b.kind==='aerobico'?'ej. Continuo zona 2':b.kind==='funcional'?'ej. WOD del día':'ej. Serie doble')+'"></label>';
+  if(b.kind==='funcional'){
+    h+='<label class="fld">Formato<select data-pl="block" data-pb="'+bi+'" data-pf="fmt">'+Object.keys(PG_FMT).map(function(k){return '<option value="'+k+'"'+(k===b.fmt?' selected':'')+'>'+PG_FMT[k]+'</option>';}).join('')+'</select></label>';
+    var fs=PG_FMT_F[b.fmt]||[];
+    h+='<div class="rounds" style="grid-template-columns:repeat('+fs.length+',minmax(0,1fr))">'+fs.map(function(f){
+      var lab=PG_LBL[f];if(f==='dur'&&b.fmt==='fortime')lab='Time cap (min)';if(f==='work'&&b.fmt==='emom')lab='Cada (seg)';
+      return '<label class="fld"><span>'+lab+'</span><input type="text" inputmode="numeric" data-pl="block" data-pb="'+bi+'" data-pf="'+f+'" value="'+esc(b[f])+'"></label>';
+    }).join('')+'</div>';
+  }
+  h+='<label class="fld">Indicación del bloque<input type="text" data-pl="block" data-pb="'+bi+'" data-pf="note" value="'+esc(b.note)+'"></label>';
+  var fields=PG_IT[b.kind]||PG_IT.fuerza;
+  h+=(b.items||[]).map(function(it,ii){
+    var at='data-pl="item" data-pb="'+bi+'" data-pi="'+ii+'"';
+    return '<section class="ex edit"><label class="fld">'+(b.kind==='aerobico'?'Máquina / actividad':'Ejercicio')+'<input type="text" '+at+' data-pf="n" value="'+esc(it.n)+'"'+(b.kind==='aerobico'?' list="dl-mach"':'')+'></label>'+
+      '<div class="rounds" style="grid-template-columns:repeat(2,minmax(0,1fr))">'+fields.map(function(f){return '<label class="fld"><span>'+f[1]+'</span><input type="text" '+at+' data-pf="'+f[0]+'" value="'+esc(it[f[0]])+'"></label>';}).join('')+'</div>'+
+      '<label class="fld">Indicación<input type="text" '+at+' data-pf="note" value="'+esc(it.note)+'"></label>'+
+      '<label class="fld">Video (link)<input type="url" inputmode="url" placeholder="https://" '+at+' data-pf="video" value="'+esc(it.video)+'"></label>'+
+      '<button type="button" class="link" data-pa="del-it" data-pb="'+bi+'" data-pi="'+ii+'">Quitar</button></section>';
+  }).join('');
+  h+='<button type="button" class="btn ghost wide" data-pa="add-it" data-pb="'+bi+'">Agregar '+(b.kind==='aerobico'?'máquina / actividad':'ejercicio')+'</button>'+
+    '<button type="button" class="link" data-pa="up" data-pb="'+bi+'">Subir bloque</button> <button type="button" class="link" data-pa="down" data-pb="'+bi+'">Bajar bloque</button> <button type="button" class="link" data-pa="del-block" data-pb="'+bi+'">Quitar bloque</button></section>';
+  return h;
+}
+function pgSection(c){
+  var trainer=UI.role==='trainer',list=pgList(c,!trainer),p=pgCurrent(c);
+  var h='<h2 class="dayh">'+(trainer?'Programas personalizados de '+esc(c.first):'Mis programas')+'</h2>';
+  if(trainer){
+    h+='<datalist id="dl-mach">'+PG_MACH.map(function(m){return '<option value="'+esc(m)+'">';}).join('')+'</datalist>';
+    h+='<div class="chips">'+list.map(function(x){return '<button type="button" class="chip" data-pa="pick" data-id="'+x.id+'" aria-pressed="'+(p&&x.id===p.id)+'">'+esc(x.name||'Programa')+'</button>';}).join('')+'<button type="button" class="chip" data-pa="new">+ Nuevo programa</button></div>';
+  }else if(list.length>1){
+    h+='<div class="chips">'+list.map(function(x){return '<button type="button" class="chip" data-pa="pick" data-id="'+x.id+'" aria-pressed="'+(p&&x.id===p.id)+'">'+esc(x.name||'Programa')+'</button>';}).join('')+'</div>';
+  }
+  if(!p)return h+'<p class="empty">'+(trainer?'Todavía no armaste un programa personalizado para '+esc(c.first)+'. Creá uno con la cantidad de meses que te pidió.':'Tu entrenador todavía no te publicó un programa personalizado.')+'</p>';
+  var nv=pgNav(p),month=nv.month,week=nv.week,sess=nv.sess;
+  var mChips=p.months.map(function(m,i){return '<button type="button" class="chip" data-pa="m" data-v="'+i+'" aria-pressed="'+(i===UI.pm)+'">Mes '+(i+1)+'</button>';}).join('');
+  var wChips=month.weeks.map(function(w,i){return '<button type="button" class="chip" data-pa="w" data-v="'+i+'" aria-pressed="'+(i===UI.pw)+'">Semana '+(i+1)+'</button>';}).join('');
+  var sChips=week.sessions.map(function(s,i){return '<button type="button" class="chip" data-pa="s" data-v="'+i+'" aria-pressed="'+(i===UI.ps)+'">Sesión '+(i+1)+'</button>';}).join('');
+  if(!trainer&&!p.pub){
+    return h+'<div class="block"><h3>'+esc(p.name)+'</h3>'+(p.goal?'<p class="legend">'+esc(p.goal)+'</p>':'')+(p.price?'<p style="font-size:22px;font-weight:700;margin:8px 0">'+esc(p.price)+'</p>':'')+
+      '<p class="legend">Este programa todavía no está habilitado. Cuando tu entrenador confirme el pago, se abre acá.</p>'+
+      '<button type="button" class="btn wide" data-pa="how-pay" data-id="'+p.id+'">Cómo pagar</button></div>';
+  }
+  if(!trainer){
+    return h+'<p class="sub">'+esc(p.name)+(p.goal?' · '+esc(p.goal):'')+'</p>'+
+      '<div class="chips">'+mChips+'</div>'+(month.focus?'<p class="legend">Foco del mes: '+esc(month.focus)+'</p>':'')+
+      '<div class="chips">'+wChips+'</div><div class="chips">'+sChips+'</div>'+
+      '<h2 class="dayh">Mes '+(UI.pm+1)+' · Semana '+(UI.pw+1)+' · Sesión '+(UI.ps+1)+(sess.name?' — '+esc(sess.name):'')+'</h2>'+
+      (sess.blocks.length?sess.blocks.map(pgBlockView).join(''):'<p class="empty">Esta sesión todavía no tiene trabajo cargado.</p>');
+  }
+  h+='<div class="block"><label class="fld">Nombre del programa<input type="text" data-pl="prog" data-pf="name" value="'+esc(p.name)+'"></label>'+
+    '<label class="fld">Objetivo<input type="text" data-pl="prog" data-pf="goal" value="'+esc(p.goal)+'"></label>'+
+    '<label class="fld">Precio (lo ve el alumno, sin poder editarlo)<input type="text" data-pl="prog" data-pf="price" value="'+esc(p.price)+'" placeholder="ej. $45.000"></label>'+
+    '<label class="fld">Link de pago (Mercado Pago, etc.)<input type="url" inputmode="url" data-pl="prog" data-pf="payLink" value="'+esc(p.payLink)+'" placeholder="https://"></label>'+
+    '<label class="fld">Alias / instrucciones de transferencia<input type="text" data-pl="prog" data-pf="payNote" value="'+esc(p.payNote)+'" placeholder="ej. Alias: coach.gero"></label>'+
+    '<p class="legend">'+pgCounts(p)+'</p>'+
+    '<div class="prog" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px"><span>Mostrar a '+esc(c.first)+' con su precio (bloqueado)</span><button type="button" class="switch" role="switch" aria-checked="'+!!p.show+'" aria-label="Mostrar para comprar" data-pa="show"><span></span></button></div>'+
+    '<div class="prog" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span>Habilitado (ya pagó)</span><button type="button" class="switch" role="switch" aria-checked="'+!!p.pub+'" aria-label="Habilitar programa" data-pa="pub"><span></span></button></div>'+
+    '<button type="button" class="link" data-pa="del-prog">Eliminar este programa</button></div>';
+  h+='<div class="chips">'+mChips+'</div>'+
+    '<button type="button" class="link" data-pa="add-month">+ Agregar mes</button> <button type="button" class="link" data-pa="del-month">Quitar Mes '+(UI.pm+1)+'</button>'+
+    '<label class="fld" style="margin-top:8px">Foco del mes '+(UI.pm+1)+'<input type="text" data-pl="month" data-pf="focus" value="'+esc(month.focus)+'" placeholder="ej. Adaptación, base aeróbica, descarga"></label>'+
+    '<div class="chips">'+wChips+'</div>'+
+    '<button type="button" class="link" data-pa="add-week">+ Agregar semana</button> <button type="button" class="link" data-pa="del-week">Quitar Semana '+(UI.pw+1)+'</button>'+
+    '<div class="chips">'+sChips+'</div>'+
+    '<button type="button" class="link" data-pa="add-sess">+ Agregar sesión</button> <button type="button" class="link" data-pa="del-sess">Quitar Sesión '+(UI.ps+1)+'</button>'+
+    '<p class="legend" style="margin-top:8px">Copiar: <button type="button" class="link" data-pa="copy-week">semana anterior aquí</button> · <button type="button" class="link" data-pa="week-month">esta semana a todo el mes</button> · <button type="button" class="link" data-pa="copy-month">mes anterior aquí</button></p>'+
+    '<h2 class="dayh">Mes '+(UI.pm+1)+' · Semana '+(UI.pw+1)+' · Sesión '+(UI.ps+1)+'</h2>'+
+    '<label class="fld">Nombre de la sesión (opcional)<input type="text" data-pl="sess" data-pf="name" value="'+esc(sess.name)+'" placeholder="ej. Piernas, Aeróbico largo, WOD"></label>'+
+    (sess.blocks.length?sess.blocks.map(pgBlockEdit).join(''):'<p class="empty">Sin bloques todavía. Elegí el tipo de trabajo:</p>')+
+    '<div class="r3"><button type="button" class="btn ghost" data-pa="add-block" data-kind="fuerza">+ Fuerza</button><button type="button" class="btn ghost" data-pa="add-block" data-kind="aerobico">+ Aeróbico</button><button type="button" class="btn ghost" data-pa="add-block" data-kind="funcional">+ Funcional</button></div>';
+  return h;
+}
+function pgTarget(c,el){
+  var p=pgCurrent(c);if(!p)return null;var nv=pgNav(p),l=el.getAttribute('data-pl');
+  if(l==='prog')return p;if(l==='month')return nv.month;if(l==='sess')return nv.sess;
+  var b=nv.sess.blocks[+el.getAttribute('data-pb')];if(!b)return null;
+  if(l==='block')return b;if(l==='item')return b.items[+el.getAttribute('data-pi')]||null;return null;
+}
+document.addEventListener('input',function(ev){
+  var t=ev.target;if(!t.getAttribute||!t.getAttribute('data-pl'))return;
+  var o=pgTarget(cur(),t);if(o){o[t.getAttribute('data-pf')]=t.value;save();}
+});
+document.addEventListener('change',function(ev){
+  var t=ev.target;if(!t.getAttribute||!t.getAttribute('data-pl'))return;
+  var o=pgTarget(cur(),t);if(o){o[t.getAttribute('data-pf')]=t.value;save();if(t.tagName==='SELECT')render();}
+});
+document.addEventListener('click',function(ev){
+  var t=ev.target.closest&&ev.target.closest('[data-pa]');if(!t)return;
+  var a=t.getAttribute('data-pa'),c=cur();if(!c)return;
+  var v=+t.getAttribute('data-v'),p,nv;
+  if(a==='how-pay'){
+    var pp0=pgList(c,true).filter(function(x){return x.id===t.getAttribute('data-id');})[0];if(!pp0)return;
+    openSheet('<h2>Cómo pagar '+esc(pp0.name)+'</h2>'+(pp0.price?'<p><strong>'+esc(pp0.price)+'</strong></p>':'')+
+      (pp0.payLink?'<a class="btn wide" href="'+esc(pp0.payLink)+'" target="_blank" rel="noopener">Ir al link de pago</a>':'')+
+      (pp0.payNote?'<p>'+esc(pp0.payNote)+'</p>':'')+
+      '<p class="legend">Cuando pagues, avisale a tu entrenador y te habilita el programa.</p><a class="btn ghost wide" href="'+WA+'" target="_blank" rel="noopener">Avisar por WhatsApp</a><button type="button" class="btn ghost" data-act="close">Cerrar</button>');
+    return;
+  }
+  if(a==='pick'){UI.pg=t.getAttribute('data-id');UI.pm=UI.pw=UI.ps=0;render();return;}
+  if(a==='m'){UI.pm=v;UI.pw=0;UI.ps=0;render();return;}
+  if(a==='w'){UI.pw=v;UI.ps=0;render();return;}
+  if(a==='s'){UI.ps=v;render();return;}
+  if(UI.role!=='trainer')return;
+  if(a==='new'){
+    var sel=function(id,n,d,lab){var o='';for(var i=1;i<=n;i++)o+='<option value="'+i+'"'+(i===d?' selected':'')+'>'+i+'</option>';return '<label class="fld">'+lab+'<select id="'+id+'">'+o+'</select></label>';};
+    openSheet('<h2>Nuevo programa</h2><label class="fld">Nombre<input type="text" id="np-name" placeholder="ej. Preparación 6 meses"></label><label class="fld">Objetivo<input type="text" id="np-goal"></label>'+
+      sel('np-m',24,3,'Cantidad de meses')+sel('np-w',5,4,'Semanas por mes')+sel('np-s',7,3,'Sesiones por semana')+
+      '<p class="legend">Después podés agregar o quitar meses, semanas y sesiones sueltos.</p><button type="button" class="btn" data-pa="create">Crear programa</button><button type="button" class="btn ghost" data-act="close">Cancelar</button>');
+    return;
+  }
+  if(a==='create'){
+    var g=function(i){return document.getElementById(i).value;},months=[];
+    for(var i=0;i<+g('np-m');i++)months.push(pgNewMonth(+g('np-w'),+g('np-s')));
+    c.custom=c.custom||[];var np={id:pgId(),name:g('np-name').trim()||'Programa '+(c.custom.length+1),goal:g('np-goal').trim(),pub:false,months:months};
+    c.custom.push(np);UI.pg=np.id;UI.pm=UI.pw=UI.ps=0;save();closeSheet();render();return;
+  }
+  p=pgCurrent(c);if(!p)return;nv=pgNav(p);
+  var blocks=nv.sess.blocks,bi=+t.getAttribute('data-pb'),M=p.months;
+  if(a==='pub'){p.pub=!p.pub;}
+  else if(a==='show'){p.show=!p.show;}
+  else if(a==='del-prog'){if(!confirm('¿Eliminar el programa completo?'))return;c.custom=c.custom.filter(function(x){return x.id!==p.id;});UI.pg=null;}
+  else if(a==='add-month'){var lw=M[M.length-1].weeks;M.push(pgNewMonth(lw.length,lw[lw.length-1].sessions.length));UI.pm=M.length-1;UI.pw=UI.ps=0;}
+  else if(a==='del-month'){if(M.length<2)return;if(!confirm('¿Quitar el Mes '+(UI.pm+1)+' con todo su contenido?'))return;M.splice(UI.pm,1);}
+  else if(a==='add-week'){var ws=nv.month.weeks;ws.push(pgNewWeek(ws[ws.length-1].sessions.length));UI.pw=ws.length-1;UI.ps=0;}
+  else if(a==='del-week'){if(nv.month.weeks.length<2)return;if(!confirm('¿Quitar esta semana?'))return;nv.month.weeks.splice(UI.pw,1);}
+  else if(a==='add-sess'){nv.week.sessions.push(pgNewSess());UI.ps=nv.week.sessions.length-1;}
+  else if(a==='del-sess'){if(nv.week.sessions.length<2)return;if(!confirm('¿Quitar esta sesión?'))return;nv.week.sessions.splice(UI.ps,1);}
+  else if(a==='copy-week'){
+    var src=UI.pw>0?nv.month.weeks[UI.pw-1]:(UI.pm>0?M[UI.pm-1].weeks[M[UI.pm-1].weeks.length-1]:null);
+    if(!src){toast('No hay una semana anterior');return;}
+    if(pgHasContent([nv.week])&&!confirm('Esto reemplaza lo cargado en esta semana. ¿Seguir?'))return;
+    nv.month.weeks[UI.pw]=pgClone(src);
+  }
+  else if(a==='week-month'){
+    if(nv.month.weeks.length<2){toast('El mes tiene una sola semana');return;}
+    if(!confirm('Esto copia esta semana sobre las demás semanas del mes. ¿Seguir?'))return;
+    nv.month.weeks=nv.month.weeks.map(function(w,i){return i===UI.pw?w:pgClone(nv.week);});
+  }
+  else if(a==='copy-month'){
+    if(UI.pm<1){toast('No hay un mes anterior');return;}
+    if(pgHasContent(nv.month.weeks)&&!confirm('Esto reemplaza todo el Mes '+(UI.pm+1)+'. ¿Seguir?'))return;
+    var f=nv.month.focus;M[UI.pm]=pgClone(M[UI.pm-1]);M[UI.pm].focus=f;
+  }
+  else if(a==='add-block'){var k=t.getAttribute('data-kind');blocks.push({id:pgId(),kind:k,name:'',fmt:'amrap',dur:'',rounds:'',work:'',rest:'',note:'',items:[]});}
+  else if(a==='del-block'){blocks.splice(bi,1);}
+  else if(a==='up'&&bi>0){blocks.splice(bi-1,0,blocks.splice(bi,1)[0]);}
+  else if(a==='down'&&bi<blocks.length-1){blocks.splice(bi+1,0,blocks.splice(bi,1)[0]);}
+  else if(a==='add-it'){var bk=blocks[bi];bk.items.push(bk.kind==='fuerza'?{id:pgId(),n:'',f1:'4',f2:'10',f3:'2',f4:'',note:'',video:''}:{id:pgId(),n:'',f1:'',f2:'',f3:'',f4:'',note:'',video:''});}
+  else if(a==='del-it'){blocks[bi].items.splice(+t.getAttribute('data-pi'),1);}
+  else return;
+  save();render();
+});
+
 function scrProgs(c){
-  var head='<h1>Programas de 12 meses</h1><p class="sub">'+(UI.role==='alumno'?'Los que compres se habilitan en tu usuario.':'Habilitá o quitá programas a '+esc(c.first)+'.')+'</p>'+clientBar(c);
+  var head='<h1>Programas</h1><p class="sub">'+(UI.role==='alumno'?'Tu programa a medida y los que compres se habilitan en tu usuario.':'Armá un programa a medida para '+esc(c.first)+' o habilitá uno estándar.')+'</p>'+clientBar(c);
   var items=PROGRAMS.map(function(p){
     var on=c.unlocked.indexOf(p.id)>-1;
     if(UI.role==='trainer'){
@@ -1460,10 +1680,10 @@ function scrProgs(c){
       var months='';for(var i=0;i<12;i++){months+='<button type="button" data-act="month" data-v="'+(i+1)+'"><span>Mes '+(i+1)+'</span><span>'+esc(p.phases[Math.floor(i/3)])+'</span></button>';}
       return '<li><details class="pg"><summary><h3>'+esc(p.name)+'<span class="badge">Habilitado</span></h3><p>'+esc(p.desc)+'</p></summary><div class="months">'+months+'</div></details></li>';
     }
-    return '<li class="prog"><div><h3>'+esc(p.name)+'</h3><p>'+esc(p.desc)+'</p><button type="button" class="btn small go" data-act="buy" data-id="'+p.id+'">Comprar</button></div></li>';
+    return '<li class="prog"><div><h3>'+esc(p.name)+'</h3><p>'+esc(p.desc)+'</p><button type="button" class="btn small go" data-act="buy" data-id="'+p.id+'">Consultar / pagar</button></div></li>';
   }).join('');
-  var note=UI.role==='trainer'?'<p class="legend" style="margin-top:12px">Cuando un alumno paga por Mercado Pago, el programa se habilita solo. Desde acá podés habilitarlo o quitarlo a mano.</p>':'';
-  return head+note+'<ul class="list" style="margin-top:8px">'+items+'</ul>';
+  var note=UI.role==='trainer'?'<p class="legend" style="margin-top:12px">Cuando un alumno te paga, habilitale el programa con el interruptor.</p>':'';
+  return head+pgSection(c)+'<h2 class="dayh">Programas estándar de 12 meses</h2>'+note+'<ul class="list" style="margin-top:8px">'+items+'</ul>';
 }
 
 /* ---------- Test de movimiento (página extra, aislada en un iframe) ---------- */
@@ -1570,12 +1790,7 @@ document.addEventListener('click',function(ev){
   }
   else if(a==='buy'){
     var p=PROGRAMS.filter(function(x){return x.id===t.getAttribute('data-id');})[0];
-    openSheet('<h2>Comprar '+esc(p.name)+'</h2><p>Pagás con Mercado Pago. Cuando se acredita el pago, el programa se habilita solo en tu usuario.</p><p>En este prototipo el pago se simula. En la versión real, acá se abre el checkout de Mercado Pago.</p>'+
-      '<button type="button" class="btn" data-act="pay" data-id="'+p.id+'">Simular pago acreditado</button><button type="button" class="btn ghost" data-act="close">Cancelar</button>');
-  }
-  else if(a==='pay'){
-    var pp=t.getAttribute('data-id');if(c.unlocked.indexOf(pp)<0)c.unlocked.push(pp);
-    save();closeSheet();render();toast('Programa habilitado');
+    openSheet('<h2>'+esc(p.name)+'</h2><p>Para habilitar este programa escribile a tu entrenador. Cuando confirme el pago, se abre en tu usuario.</p><a class="btn wide" href="'+WA+'" target="_blank" rel="noopener">Escribir por WhatsApp</a><button type="button" class="btn ghost" data-act="close">Cerrar</button>');
   }
   else if(a==='month'){toast('En la versión real se abre el plan del mes '+t.getAttribute('data-v'));}
   else if(a==='logout'){auth.signOut();}
