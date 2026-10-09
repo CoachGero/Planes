@@ -462,8 +462,9 @@ function ang3(a,b,c){
 }
 const vert=(a,b)=>Math.abs(Math.atan2(b[0]-a[0],b[1]-a[1]))*180/Math.PI;
 let poseLandmarker=null,running=false,dataLog=[],last=null,maxSpan=0,liveReps=0,romLive={};
-let TR={};
-function resetTracking(){TR={img:[],wor:[],side:null,er:null,el:null};}
+let TR={},tsOff=0,tsLast=0;
+function tsNow(){const t=Math.round(tsOff+video.currentTime*1000);tsLast=Math.max(tsLast+1,t);return tsLast;}
+function resetTracking(){TR={img:[],wor:[],side:null,er:null,el:null,off:{},L2:{},L3:{}};tsOff=tsLast+1000;}
 resetTracking();
 const REF_MAX={rodilla:90,cadera:70,tronco:40,cuello:30,codo:90,hombro:90,tobillo:40};
 /* respaldo cuando el ejercicio no tiene músculos cargados (p.ej. "Otro"): se estima por la articulación que más se mueve */
@@ -590,14 +591,16 @@ class OneEuro{
   }
 }
 const med3=(a,b,c)=>Math.max(Math.min(a,b),Math.min(Math.max(a,b),c));
-function smoothSet(set,t,store){
+function smoothSet(set,t,store,lim){
   const [minC,beta]=SMOOTH[$('suavSel').value]||SMOOTH.medio;
   return set.map((p,i)=>{
     const F=store[i]||(store[i]={x:new OneEuro(),y:new OneEuro(),z:new OneEuro(),hx:[],hy:[],last:null});
     const vis=p.visibility==null?1:p.visibility;
     if(vis<0.35&&F.last)return {x:F.last.x,y:F.last.y,z:F.last.z,visibility:vis,hold:true};
     F.hx.push(p.x);F.hy.push(p.y);if(F.hx.length>3){F.hx.shift();F.hy.shift();}
-    const x=F.hx.length===3?med3(F.hx[0],F.hx[1],F.hx[2]):p.x,y=F.hy.length===3?med3(F.hy[0],F.hy[1],F.hy[2]):p.y;
+    let x=F.hx.length===3?med3(F.hx[0],F.hx[1],F.hx[2]):p.x,y=F.hy.length===3?med3(F.hy[0],F.hy[1],F.hy[2]):p.y;
+    // descarta "teletransportes": un punto no puede moverse más de 'lim' entre dos cuadros
+    if(F.last&&lim){const dx=x-F.last.x,dy=y-F.last.y,dd=Math.hypot(dx,dy);if(dd>lim){x=F.last.x+dx*lim/dd;y=F.last.y+dy*lim/dd;}}
     const o={x:F.x.f(x,t,minC,beta),y:F.y.f(y,t,minC,beta),z:F.z.f(p.z||0,t,minC,beta),visibility:vis};
     F.last=o;return o;
   });
@@ -614,13 +617,13 @@ function loop(){
   if(!running)return;
   if(video.paused||video.ended||video.currentTime===lastT){if(recCtx&&!video.paused&&!video.ended){recCtx.drawImage(video,0,0,recCanvas.width,recCanvas.height);recCtx.drawImage(canvas,0,0,recCanvas.width,recCanvas.height);}requestAnimationFrame(loop);return;}
   lastT=video.currentTime;
-  const res=poseLandmarker.detectForVideo(video,performance.now());
+  const res=poseLandmarker.detectForVideo(video,tsNow());
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(res.landmarks&&res.landmarks.length){
     const W=canvas.width,H=canvas.height,tt=video.currentTime;
-    const lm=smoothSet(res.landmarks[0],tt,TR.img);
+    const lm=smoothSet(res.landmarks[0],tt,TR.img,0.12);
     const use3d=$('angSel').value==='3d'&&res.worldLandmarks&&res.worldLandmarks.length;
-    const wl=use3d?smoothSet(res.worldLandmarks[0],tt,TR.wor):null;
+    const wl=use3d?smoothSet(res.worldLandmarks[0],tt,TR.wor,0.35):null;
     const V=i=>lm[i].visibility||0;
     const R=[12,14,16,24,26,28],L=[11,13,15,23,25,27];
     // lado más visible, con histéresis para que no salte de un lado al otro
@@ -634,17 +637,42 @@ function loop(){
     const der=TR.side==='der';
     const [ish,iel,iwr,ih,ik,ia,ifo,iey,iea]=der?[12,14,16,24,26,28,32,5,8]:[11,13,15,23,25,27,31,2,7];
     const P=i=>[lm[i].x*W,lm[i].y*H];
-    const mk=Pf=>{
-      const nariz=Pf(0),ojo=Pf(iey),oreja=Pf(iea),hom=Pf(ish),cod=Pf(iel),mun=Pf(iwr);
-      const cerv=vmid(Pf(11),Pf(12)),cad=Pf(ih),rod=Pf(ik),tob=Pf(ia),pie=Pf(ifo);
+    const OTH=i=>i===2?5:i===5?2:i%2?i+1:i-1;
+    const mk=(Pf,tag)=>{
+      // si el punto del lado elegido se tapa (barra, otro miembro), se usa el del lado opuesto corrido por la distancia que había entre ambos
+      const pk=i=>{
+        const o=OTH(i),p=Pf(i),key=tag+i,off=TR.off[key];
+        if(V(i)>0.7&&V(o)>0.7){const d=vsub(p,Pf(o));TR.off[key]=off?vadd(vmul(off,0.95),vmul(d,0.05)):d;return p;}
+        if(V(i)<0.5&&V(o)>0.6&&off)return vadd(Pf(o),off);
+        return p;
+      };
+      const nariz=Pf(0),ojo=pk(iey),oreja=pk(iea),hom=pk(ish),cod=pk(iel),mun=pk(iwr);
+      const cerv=vmid(Pf(11),Pf(12)),cad=pk(ih),rod=pk(ik),tob=pk(ia),pie=pk(ifo);
       // MediaPipe no marca frente ni nuca: se estiman a partir de nariz, ojo y oreja
       const frente=vadd(ojo,vmul(vsub(ojo,nariz),0.6));
       const nuca=vadd(vadd(oreja,vmul(vsub(oreja,nariz),0.3)),vmul(vsub(cerv,oreja),0.3));
-      return {nariz,ojo,oreja,hom,cod,mun,cerv,cad,rod,tob,pie,frente,nuca};
+      return {nariz,ojo,oreja,hom,cod,mun,cerv,cad,rod,tob,pie,frente,nuca,cabeza:$('cabSel').value==='frente'?frente:nuca};
     };
-    const g=mk(P),g3=wl?mk(i=>[wl[i].x,wl[i].y,wl[i].z]):g;
+    /* un hueso no cambia de largo: se fija el largo típico de cada segmento (mediana de los cuadros bien vistos) y se corrige lo que se estira o achica de más.
+       Se recorre desde la cadera hacia afuera, así el error de un punto no deforma toda la cadena. */
+    const SEG=[['cad','rod'],['rod','tob'],['tob','pie'],['cad','cerv'],['cerv','cabeza'],['cerv','hom'],['hom','cod'],['cod','mun']];
+    const VIS={cad:V(ih),rod:V(ik),tob:V(ia),pie:V(ifo),cerv:Math.min(V(11),V(12)),cabeza:V(0),hom:V(ish),cod:V(iel),mun:V(iwr)};
+    let corr=0;
+    const constrain=(gg,tag)=>{
+      const S=TR[tag];
+      SEG.forEach(([p,c])=>{
+        const d=vsub(gg[c],gg[p]),len=Math.hypot(...d),st=S[p+c]||(S[p+c]=[]);
+        if(VIS[p]>=0.7&&VIS[c]>=0.7&&len>0){st.push(len);if(st.length>120)st.shift();}
+        if(st.length>=10&&len>0){
+          const L=st.slice().sort((x,y)=>x-y)[st.length>>1],cl=Math.min(1.12*L,Math.max(0.8*L,len));
+          if(cl!==len){gg[c]=vadd(gg[p],vmul(d,cl/len));corr++;}
+        }
+      });
+    };
+    const g=mk(P,'i'),g3=wl?mk(i=>[wl[i].x,wl[i].y,wl[i].z],'w'):g;
+    constrain(g,'L2');if(wl)constrain(g3,'L3');
     const {nariz,hom,cod,mun,cerv,cad,rod,tob,pie}=g;
-    const cabeza=$('cabSel').value==='frente'?g.frente:g.nuca,cabeza3=$('cabSel').value==='frente'?g3.frente:g3.nuca;
+    const cabeza=g.cabeza,cabeza3=g3.cabeza;
     const brazo=usaBrazo();
     ctx.strokeStyle='#f5f5f5';ctx.lineWidth=2;ctx.beginPath();
     [cabeza,cerv,cad,rod,tob,pie].forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));
@@ -686,9 +714,10 @@ function loop(){
     const hfs=Math.round(fs*0.9),lines=[[fase,fase==='Concéntrica'?'#ff4d52':fase==='Excéntrica'?'#f5f5f5':'#a3a3a3'],['Reps: '+liveReps,'#fff'],[romTxt,'#ffd166']];
     if(vTxt)lines.push([vTxt,'#fff']);
     const calidad=Math.round(([cad,rod,tob].length&&(V(ih)+V(ik)+V(ia)+Math.min(V(11),V(12)))/4)*100);
-    lines.push(['Seguimiento '+calidad+'% · lado '+(der?'der.':'izq.')+(use3d?' · 3D':''),calidad>=70?'#3ddc84':calidad>=50?'#ffb020':'#ff4d52']);
+    TR.corr=(TR.corr||0)+(corr?1:0);TR.frames=(TR.frames||0)+1;
+    lines.push(['Seguimiento '+calidad+'% · lado '+(der?'der.':'izq.')+(use3d?' · 3D':'')+(TR.frames>20?' · corregido '+Math.round(100*TR.corr/TR.frames)+'%':''),calidad>=70?'#3ddc84':calidad>=50?'#ffb020':'#ff4d52']);
     if(visKey<0.5)lines.push(['⚠ Se ve poco: acercate o girá la cámara','#ff4d52']);
-    ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(8,8,hfs*8.6,lines.length*hfs*1.25+10);
+    ctx.font='bold '+hfs+'px system-ui,sans-serif';const bw=Math.max(hfs*8.6,...lines.map(l=>ctx.measureText(l[0]).width+16));ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(8,8,Math.min(bw,canvas.width-16),lines.length*hfs*1.25+10);
     lines.forEach(([tx,col],i)=>{ctx.font='bold '+hfs+'px system-ui,sans-serif';ctx.fillStyle=col;ctx.fillText(tx,16,8+hfs*1.15*(i+1)+2);});
   }
   if(recCtx){recCtx.drawImage(video,0,0,recCanvas.width,recCanvas.height);recCtx.drawImage(canvas,0,0,recCanvas.width,recCanvas.height);}
@@ -2147,4 +2176,3 @@ document.addEventListener('keydown',function(ev){if(ev.key==='Escape')closeSheet
 </script>
 </body>
 </html>
-
