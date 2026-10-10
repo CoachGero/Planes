@@ -1389,6 +1389,58 @@ function exBlock(c,w,d,e){
     '<details class="obs"'+(note?' open':'')+'><summary>Observaciones para mi entrenador</summary><textarea data-note data-k="'+k+'" aria-label="Observaciones de '+esc(e.name)+'" placeholder="Cómo te sentiste, qué cambiarías, qué tuviste en cuenta">'+esc(note)+'</textarea></details></section>';
 }
 
+/* ---------- Movilidad y activación (entrada en calor) por sesión: hasta 4 ejercicios cada una, solo repeticiones (iguales todas las semanas) ---------- */
+var WARM_KINDS={mov:'Movilidad',act:'Activación muscular (entrada en calor)'};
+var WARM_MAX=4;
+var WARM_SUG={mov:['Movilidad de cadera 90/90','Gato-camello','Rotación torácica en cuadrupedia','Sentadilla profunda con apoyo','Movilidad de tobillo en pared','Círculos de hombro','Apertura de pecho en pared','Bisagra de cadera con palo','Estocada con rotación','Movilidad de columna torácica en foam roller'],
+  act:['Puente de glúteo','Clamshell con banda','Bird dog','Dead bug','Plancha','Band pull-apart','Face pull con banda','Monster walk','Elevación de pelvis a una pierna','Serrato en pared','Rotación externa con banda','Sentadilla goblet liviana']};
+function warmOf(c,d){
+  if(!c.warm)c.warm=[];
+  while(c.warm.length<c.plan.length)c.warm.push({mov:[],act:[]});
+  var w=c.warm[d];if(!w){w=c.warm[d]={mov:[],act:[]};}
+  if(!w.mov)w.mov=[];if(!w.act)w.act=[];
+  return w;
+}
+function warmEdit(c,d){
+  var w=warmOf(c,d);
+  var h='<datalist id="dl-wm">'+WARM_SUG.mov.map(function(m){return '<option value="'+esc(m)+'">';}).join('')+'</datalist><datalist id="dl-wa">'+WARM_SUG.act.map(function(m){return '<option value="'+esc(m)+'">';}).join('')+'</datalist>';
+  ['mov','act'].forEach(function(k){
+    h+='<section class="block"><p class="legend" style="margin:0 0 6px"><strong>'+WARM_KINDS[k]+'</strong> · hasta '+WARM_MAX+' ejercicios · las repeticiones valen para todas las semanas</p>'+
+      w[k].map(function(it,i){
+        return '<div class="rounds" style="grid-template-columns:2fr 1fr;align-items:end">'+
+          '<label class="fld"><span>Ejercicio '+(i+1)+'</span><input type="text" list="dl-w'+(k==='mov'?'m':'a')+'" data-wk="'+k+'" data-wi="'+i+'" data-wf="n" value="'+esc(it.n)+'"></label>'+
+          '<label class="fld"><span>Repeticiones</span><input type="text" maxlength="24" data-wk="'+k+'" data-wi="'+i+'" data-wf="r" value="'+esc(it.r)+'"></label></div>'+
+          '<button type="button" class="link" data-wa="del" data-wk="'+k+'" data-wi="'+i+'">Quitar ejercicio '+(i+1)+'</button>';
+      }).join('')+
+      (w[k].length<WARM_MAX?'<button type="button" class="btn ghost wide" data-wa="add" data-wk="'+k+'">Agregar ejercicio de '+(k==='mov'?'movilidad':'activación')+' ('+w[k].length+'/'+WARM_MAX+')</button>':'<p class="legend">Máximo de '+WARM_MAX+' ejercicios.</p>')+
+      '</section>';
+  });
+  return h;
+}
+function warmView(c,d){
+  var w=warmOf(c,d),h='';
+  ['mov','act'].forEach(function(k){
+    var l=w[k].filter(function(it){return String(it.n||'').trim();});
+    if(!l.length)return;
+    h+='<h3 class="blockh">'+WARM_KINDS[k]+'</h3><div class="wod"><ol>'+l.map(function(it){return '<li>'+(it.r?'<b>'+esc(it.r)+'</b> ':'')+esc(it.n)+'</li>';}).join('')+'</ol></div>';
+  });
+  return h;
+}
+document.addEventListener('input',function(ev){
+  var t=ev.target;if(!t.hasAttribute||!t.hasAttribute('data-wk'))return;
+  var c=cur();if(!c)return;var it=warmOf(c,UI.day)[t.getAttribute('data-wk')][+t.getAttribute('data-wi')];
+  if(it){it[t.getAttribute('data-wf')]=t.value;save();}
+});
+document.addEventListener('click',function(ev){
+  var t=ev.target.closest&&ev.target.closest('[data-wa]');if(!t)return;
+  var c=cur();if(!c||UI.role!=='trainer')return;
+  var w=warmOf(c,UI.day),k=t.getAttribute('data-wk'),a=t.getAttribute('data-wa');
+  if(a==='add'&&w[k].length<WARM_MAX)w[k].push({n:'',r:''});
+  else if(a==='del')w[k].splice(+t.getAttribute('data-wi'),1);
+  else return;
+  save();render();
+});
+
 function scrTrain(c){
   var w=UI.week,d=UI.day,blocks=c.plan[d]||[],list=dayExercises(c,d);
   var nw=weeksOf(c);if(w>nw)w=UI.week=nw;
@@ -1404,7 +1456,7 @@ function scrTrain(c){
     '<div class="chips" role="group" aria-label="Semana">'+chipsW+'</div>'+
     (c.plan.length?'<div class="chips" role="group" aria-label="Sesión">'+chipsD+'</div><h2 class="dayh">Sesión '+(d+1)+'</h2>'+
       '<p class="legend">Cada ronda muestra las repeticiones, los kilos que usaste y el RIR previsto. <span id="cnt">'+done+' de '+total+'</span> rondas cargadas.</p>'+
-      (body||'<p class="empty">Esta sesión todavía no tiene ejercicios.</p>')
+      warmView(c,d)+(body?'<h2 class="dayh" style="font-size:16px">Trabajo principal</h2>'+body:'<p class="empty">Esta sesión todavía no tiene ejercicios.</p>')
       :'<p class="empty">Tu entrenador todavía no cargó sesiones.</p>')+
     ((c.archivo||[]).length?'<h2 class="dayh">Resumen de planes anteriores</h2>'+c.archivo.slice().reverse().map(function(inf,ix){return informeHtml(inf,'Plan #'+((c.archivo.length)-ix));}).join(''):'')+
     '<a class="btn ghost wide" href="'+WA+'" target="_blank" rel="noopener">Escribirle a mi entrenador por WhatsApp</a>';
@@ -1469,6 +1521,7 @@ function scrEdit(c){
     (c.plan.length?'<div class="chips" role="group" aria-label="Sesión">'+chipsD+'</div>':'')+
     (c.plan.length<MAX_SESSIONS?'<button type="button" class="link" data-act="add-session">+ Agregar sesión ('+c.plan.length+'/'+MAX_SESSIONS+')</button>':'<p class="legend">Máximo de '+MAX_SESSIONS+' sesiones alcanzado.</p>')+
     (c.plan.length?'<h2 class="dayh">Sesión '+(d+1)+'</h2>'+
+      warmEdit(c,d)+'<h2 class="dayh" style="font-size:16px">Bloques de trabajo</h2>'+
       (body||'<p class="empty">Esta sesión todavía no tiene bloques.</p>')+
       '<button type="button" class="btn ghost wide" data-act="add-block">Agregar bloque</button>'+
       (c.plan.length>1?'<button type="button" class="link" data-act="del-session">Quitar esta sesión</button>':'')+
@@ -2045,11 +2098,11 @@ document.addEventListener('click',function(ev){
       '<button type="button" class="btn ghost" data-act="close">Cerrar</button>');
   }
   else if(a==='add-session'){
-    if(c.plan.length<MAX_SESSIONS){c.plan.push([]);UI.day=c.plan.length-1;save();render();}
+    if(c.plan.length<MAX_SESSIONS){c.plan.push([]);warmOf(c,c.plan.length-1);UI.day=c.plan.length-1;save();render();}
   }
   else if(a==='del-session'){
     if(c.plan.length>1){
-      c.plan.splice(UI.day,1);
+      c.plan.splice(UI.day,1);if(c.warm)c.warm.splice(UI.day,1);
       UI.day=Math.min(UI.day,c.plan.length-1);
       save();render();
     }
