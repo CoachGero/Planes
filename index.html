@@ -1448,7 +1448,8 @@ document.addEventListener('click',function(ev){
 var LIB=[],LIB_LOADED=false,LIBUI={q:'',cat:'',tren:'',pq:'',ptren:'',blk:null,sel:{},draft:null,fromEx:null,editId:null},libT;
 var LIB_CAT={fuerza:'Fuerza',movilidad:'Movilidad',activacion:'Activación',funcional:'Funcional / CrossFit'};
 var LIB_TREN={sup:'Tren superior',inf:'Tren inferior',core:'Core / tronco',full:'Cuerpo completo'};
-var LIB_DOM=['Rodilla','Cadera','Hombro','Codo','Tobillo','Tronco / core','Cuerpo completo'];
+var LIB_DOM=['Rodilla','Cadera','Cadera / rodilla','Hombro','Codo','Codo / hombro','Tobillo','Tronco / core','Cuerpo completo'];
+var LIB_CAT_F=Object.assign({},LIB_CAT,{none:'Sin clasificar'}),LIB_TREN_F=Object.assign({},LIB_TREN,{none:'Sin clasificar'});
 var LIB_PAT=['Sentadilla','Bisagra de cadera','Zancada / unilateral','Empuje horizontal','Empuje vertical','Tracción horizontal','Tracción vertical','Anti-extensión / estabilidad','Rotación / anti-rotación','Acarreo','Salto / potencia','Aislado'];
 var LIB_EQ=['Barra','Mancuernas','Polea','Máquina','Peso corporal','Kettlebell','Banda elástica','TRX / anillas','Disco','Otro'];
 var LIB_MEC={multi:'Multiarticular',mono:'Monoarticular'};
@@ -1476,8 +1477,8 @@ function libTags(x){
 function libFilter(q,cat,tren){
   var k=libNorm(q);
   return LIB.filter(function(x){
-    if(cat&&x.cat!==cat)return false;
-    if(tren&&x.tren!==tren)return false;
+    if(cat==='none'){if(x.cat&&x.tren)return false;}else if(cat&&x.cat!==cat)return false;
+    if(tren==='none'){if(x.tren)return false;}else if(tren&&x.tren!==tren)return false;
     if(!k)return true;
     return libNorm(x.n+' '+libTags(x)+' '+(LIB_CAT[x.cat]||'')).indexOf(k)>=0;
   }).sort(function(a,b){return a.n.localeCompare(b.n);});
@@ -1506,16 +1507,19 @@ function libListHtml(){
   var l=libFilter(LIBUI.q,LIBUI.cat,LIBUI.tren);
   if(!LIB.length)return '<p class="empty">Todavía no cargaste ejercicios. Tocá "+ Nuevo ejercicio" o "Importar desde mis planes" para traer los que ya usás.</p>';
   if(!l.length)return '<p class="empty">Ningún ejercicio coincide con la búsqueda.</p>';
-  var h='',last='';
-  l.forEach(function(x){var g=LIB_TREN[x.tren]||'Sin clasificar';if(g!==last){h+='<h3 class="blockh">'+esc(g)+'</h3>';last=g;}h+=libCard(x);});
+  var h='',last='',byCat=!LIBUI.cat&&!LIBUI.tren;
+  if(byCat){var co=Object.keys(LIB_CAT),to=Object.keys(LIB_TREN);
+    var ck=function(x){var i=co.indexOf(x.cat);return i<0?99:i;},tk=function(x){var i=to.indexOf(x.tren);return i<0?99:i;};
+    l.sort(function(a,b){return ck(a)-ck(b)||tk(a)-tk(b)||a.n.localeCompare(b.n);});}
+  l.forEach(function(x){var g=byCat?(LIB_CAT[x.cat]||'Sin clasificar'):(LIB_TREN[x.tren]||'Sin clasificar');if(g!==last){h+='<h3 class="blockh">'+esc(g)+'</h3>';last=g;}h+=libCard(x);});
   return h;
 }
 function scrEjer(){
   return '<h1>Mis ejercicios</h1><p class="sub">Cargá una sola vez cada ejercicio con su video y datos. Después lo elegís desde el Plan sin volver a escribirlo.</p>'+
     '<div class="r3" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button type="button" class="btn" data-la="new">+ Nuevo ejercicio</button><button type="button" class="btn ghost" data-la="import">Importar desde mis planes</button></div>'+
     '<label class="fld" style="margin-top:12px">Buscar<input type="search" data-lq="q" placeholder="Nombre, músculo, equipo…" value="'+esc(LIBUI.q)+'"></label>'+
-    '<div class="rounds" style="grid-template-columns:1fr 1fr"><label class="fld"><span>Categoría</span><select data-lq="cat">'+libOpts(LIB_CAT,LIBUI.cat,'Todas')+'</select></label>'+
-    '<label class="fld"><span>Tren</span><select data-lq="tren">'+libOpts(LIB_TREN,LIBUI.tren,'Todos')+'</select></label></div>'+
+    '<div class="rounds" style="grid-template-columns:1fr 1fr"><label class="fld"><span>Categoría</span><select data-lq="cat">'+libOpts(LIB_CAT_F,LIBUI.cat,'Todas')+'</select></label>'+
+    '<label class="fld"><span>Tren</span><select data-lq="tren">'+libOpts(LIB_TREN_F,LIBUI.tren,'Todos')+'</select></label></div>'+
     '<p class="legend">'+LIB.length+' ejercicio'+(LIB.length===1?'':'s')+' en tu biblioteca</p><div id="lib-list">'+libListHtml()+'</div>';
 }
 function libForm(x){
