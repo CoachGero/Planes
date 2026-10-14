@@ -1232,13 +1232,17 @@ function buildInforme(c){
   prog.sort(function(a,b){return b.delta-a.delta;});
   var mejor=prog.length?prog[0]:null,peor=prog.length>1?prog[prog.length-1]:(prog.length===1?prog[0]:null);
   if(peor===mejor)peor=null;
-  return {fecha:new Date().toISOString(),semanas:nw,cumplimiento:totC?Math.round(totF/totC*100):0,mejor:mejor,peor:peor,progresion:prog,observaciones:obs,detalle:detalle};
+  return {fecha:new Date().toISOString(),semanas:nw,cumplimiento:totC?Math.round(totF/totC*100):0,mejor:mejor,peor:peor,progresion:prog,observaciones:obs,detalle:detalle,notaEntrenador:String(c.coachNote||'').trim(),notasSesion:(c.sessNote||[]).map(function(t,i){return {s:i+1,t:String(t||'').trim()};}).filter(function(x){return x.t;})};
 }
 function informeHtml(inf,titulo){
   var f1=function(v){return (Math.round(v*10)/10)+' kg';};
   var h='<div class="rep"><h4>'+esc(titulo||'Cierre de plan')+'</h4><div class="d">'+new Date(inf.fecha).toLocaleDateString('es-AR')+' · '+inf.semanas+' semana'+(inf.semanas===1?'':'s')+' · '+inf.cumplimiento+'% de rondas cargadas</div>';
   h+=inf.mejor?'<div>Mayor progresión de carga: <strong class="up">'+esc(inf.mejor.nombre)+'</strong> ('+f1(inf.mejor.de)+' → '+f1(inf.mejor.a)+', semanas '+inf.mejor.semanas+')</div>':'<div class="d">Sin datos suficientes para medir progresión.</div>';
   h+=inf.peor?'<div>Menor progresión'+(inf.peor.delta<0?' (bajó de carga)':'')+': <strong class="'+(inf.peor.delta<0?'down':'')+'">'+esc(inf.peor.nombre)+'</strong> ('+f1(inf.peor.de)+' → '+f1(inf.peor.a)+', semanas '+inf.peor.semanas+')</div>':'';
+  if(inf.notaEntrenador||(inf.notasSesion&&inf.notasSesion.length)){
+    var nb=function(t){return esc(t).replace(/\n/g,'<br>');};
+    h+='<div style="margin-top:8px">Notas del entrenador:</div><ul>'+(inf.notaEntrenador?'<li>'+nb(inf.notaEntrenador)+'</li>':'')+(inf.notasSesion||[]).map(function(x){return '<li>Sesión '+x.s+': '+nb(x.t)+'</li>';}).join('')+'</ul>';
+  }
   if(inf.observaciones&&inf.observaciones.length)h+='<div style="margin-top:8px">Observaciones del alumno:</div><ul>'+inf.observaciones.map(function(o){return '<li>'+esc(o.ex)+' (semana '+o.semana+'): '+esc(o.texto)+'</li>';}).join('')+'</ul>';
   if(inf.detalle&&inf.detalle.length){
     h+='<details class="fold" style="margin-top:8px"><summary>Ver máximas y mínimas por ejercicio de este plan</summary>'+
@@ -1628,6 +1632,22 @@ document.addEventListener('click',function(ev){
   }
 });
 
+/* ---------- Notas del entrenador para el alumno ---------- */
+function coachNoteView(txt,titulo){
+  txt=String(txt||'').trim();if(!txt)return '';
+  return '<div class="memo" style="border-left-color:var(--text)"><div class="memo-h"><span>'+esc(titulo)+'</span></div><div class="memo-v" style="max-height:none">'+esc(txt).replace(/\n/g,'<br>')+'</div></div>';
+}
+function coachNoteEdit(c,d,sess){
+  if(sess){var sn=(c.sessNote||[])[d]||'';return '<label class="fld" style="margin-top:8px">Nota para esta sesión (la ve '+esc(c.first)+')<textarea rows="3" data-cn="sess" placeholder="ej. Esta sesión priorizá la técnica, subí kilos solo si el RIR lo permite">'+esc(sn)+'</textarea></label>';}
+  return '<label class="fld" style="margin-top:12px">Notas y observaciones del plan (las ve '+esc(c.first)+')<textarea rows="4" data-cn="gen" placeholder="ej. Cualquier molestia en la rodilla me avisás. Foco del mes: técnica de sentadilla.">'+esc(c.coachNote||'')+'</textarea></label>';
+}
+document.addEventListener('input',function(ev){
+  var t=ev.target;if(!t.getAttribute||!t.getAttribute('data-cn')||UI.role!=='trainer')return;
+  var c=cur();if(!c)return;
+  if(t.getAttribute('data-cn')==='gen')c.coachNote=t.value;
+  else{c.sessNote=c.sessNote||[];while(c.sessNote.length<c.plan.length)c.sessNote.push('');c.sessNote[UI.day]=t.value;}
+  save();
+});
 function scrTrain(c){
   var w=UI.week,d=UI.day,blocks=c.plan[d]||[],list=dayExercises(c,d);
   var nw=weeksOf(c);if(w>nw)w=UI.week=nw;
@@ -1639,9 +1659,9 @@ function scrTrain(c){
     return '<h3 class="blockh">'+esc(b.name||'Bloque')+'</h3>'+(b.exercises||[]).map(function(e){return exBlock(c,w,d,e);}).join('');
   }).join('');
   return '<h1>Plan de septiembre</h1><p class="sub">'+c.plan.length+' sesión'+(c.plan.length===1?'':'es')+' por semana con PF. Gerónimo Malara</p>'+
-    memoCard(c)+
+    memoCard(c)+coachNoteView(c.coachNote,'Notas de tu entrenador')+
     '<div class="chips" role="group" aria-label="Semana">'+chipsW+'</div>'+
-    (c.plan.length?'<div class="chips" role="group" aria-label="Sesión">'+chipsD+'</div><h2 class="dayh">Sesión '+(d+1)+'</h2>'+
+    (c.plan.length?'<div class="chips" role="group" aria-label="Sesión">'+chipsD+'</div><h2 class="dayh">Sesión '+(d+1)+'</h2>'+coachNoteView((c.sessNote||[])[d],'Nota de esta sesión')+
       '<p class="legend">Cada ronda muestra las repeticiones, los kilos que usaste y el RIR previsto. <span id="cnt">'+done+' de '+total+'</span> rondas cargadas.</p>'+
       warmView(c,d)+(body?'<h2 class="dayh" style="font-size:16px">Trabajo principal</h2>'+body:'<p class="empty">Esta sesión todavía no tiene ejercicios.</p>')
       :'<p class="empty">Tu entrenador todavía no cargó sesiones.</p>')+
@@ -1703,11 +1723,11 @@ function scrEdit(c){
       '<button type="button" class="link" data-act="del-block" data-block="'+b.id+'">Quitar bloque</button>'+
       '</section>';
   }).join('');
-  return libDatalist()+'<h1>Plan de '+esc(c.first)+'</h1><p class="sub">Agrupá los ejercicios en bloques (series simples, dobles, triples, HIIT, tabata, AMRAP, etc). Cargá las repeticiones y el RIR de todas las semanas juntas, sin cambiar de pestaña.</p>'+clientBar(c)+memoCard(c)+
+  return libDatalist()+'<h1>Plan de '+esc(c.first)+'</h1><p class="sub">Agrupá los ejercicios en bloques (series simples, dobles, triples, HIIT, tabata, AMRAP, etc). Cargá las repeticiones y el RIR de todas las semanas juntas, sin cambiar de pestaña.</p>'+clientBar(c)+memoCard(c)+coachNoteEdit(c)+
     '<label class="fld" style="max-width:220px;margin-top:12px">Cantidad de semanas del plan<select data-sel="weeksCount">'+weekOpts+'</select></label>'+
     (c.plan.length?'<div class="chips" role="group" aria-label="Sesión">'+chipsD+'</div>':'')+
     (c.plan.length<MAX_SESSIONS?'<button type="button" class="link" data-act="add-session">+ Agregar sesión ('+c.plan.length+'/'+MAX_SESSIONS+')</button>':'<p class="legend">Máximo de '+MAX_SESSIONS+' sesiones alcanzado.</p>')+
-    (c.plan.length?'<h2 class="dayh">Sesión '+(d+1)+'</h2>'+
+    (c.plan.length?'<h2 class="dayh">Sesión '+(d+1)+'</h2>'+coachNoteEdit(c,d,true)+
       warmEdit(c,d)+'<h2 class="dayh" style="font-size:16px">Bloques de trabajo</h2>'+
       (body||'<p class="empty">Esta sesión todavía no tiene bloques.</p>')+
       '<button type="button" class="btn ghost wide" data-act="add-block">Agregar bloque</button>'+
@@ -2289,7 +2309,7 @@ document.addEventListener('click',function(ev){
   }
   else if(a==='del-session'){
     if(c.plan.length>1){
-      c.plan.splice(UI.day,1);if(c.warm)c.warm.splice(UI.day,1);
+      c.plan.splice(UI.day,1);if(c.warm)c.warm.splice(UI.day,1);if(c.sessNote)c.sessNote.splice(UI.day,1);
       UI.day=Math.min(UI.day,c.plan.length-1);
       save();render();
     }
@@ -2313,7 +2333,7 @@ document.addEventListener('click',function(ev){
     if(!confirm('Se va a guardar en "Planes anteriores" la progresión, las observaciones, y el detalle de carga máxima y mínima de cada ejercicio por cantidad de repeticiones (semana, sesión, ronda y RIR). Después se borran los kilos y observaciones cargados para poder empezar un plan nuevo; la estructura de ejercicios (reps/RIR/rondas) queda igual, la podés editar. ¿Continuar?'))return;
     var inf=buildInforme(c);
     c.archivo=c.archivo||[];c.archivo.push(inf);
-    c.loads={};c.notes={};
+    c.loads={};c.notes={};c.coachNote='';c.sessNote=[];
     save();toast('Plan archivado. Ya podés armar el plan nuevo.');render();
   }
   else if(a==='toggle-prog'){
