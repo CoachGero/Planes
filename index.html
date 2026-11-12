@@ -177,6 +177,7 @@ details.pg summary p{color:var(--muted);font-size:13px;margin-top:4px;}
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);}
 .tabs-in{max-width:520px;margin:0 auto;display:grid;}
 .tab{background:none;border:0;color:var(--muted);font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0;min-height:58px;}
+.dot-new{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--red);margin-right:8px;vertical-align:middle;box-shadow:0 0 0 3px rgba(217,31,38,.25);}
 .many .tab{font-size:9px;letter-spacing:-.2px;padding-left:1px;padding-right:1px;overflow:hidden;}
 .tab[aria-current="page"]{color:var(--text);font-weight:600;box-shadow:inset 0 2px 0 var(--red);}
 
@@ -1373,7 +1374,7 @@ function scrClients(){
   return '<h1>Tus alumnos</h1><p class="sub">Elegí un alumno para ver o cargar su plan.</p>'+
   '<ul class="list">'+S.clients.map(function(x){
     var p=planPct(x);
-    return '<li><button type="button" class="row-btn'+(x.id===UI.sel?' on':'')+'" data-act="pick" data-id="'+x.id+'"><span class="rb-main"><strong>'+esc(x.name)+'</strong><em>'+esc(x.goal)+'</em></span><span class="rb-side"><span class="bar" aria-hidden="true"><i style="width:'+p+'%"></i></span>'+p+'% del plan</span></button></li>';
+    return '<li><button type="button" class="row-btn'+(x.id===UI.sel?' on':'')+'" data-act="pick" data-id="'+x.id+'"><span class="rb-main"><strong>'+(x.needsPlan?'<span class="dot-new" role="img" aria-label="Nuevo plan a realizar" title="Nuevo plan a realizar"></span>':'')+esc(x.name)+'</strong>'+(x.needsPlan?'<em style="color:var(--red-text)">Nuevo plan a realizar</em>':'')+'<em>'+esc(x.goal)+'</em></span><span class="rb-side"><span class="bar" aria-hidden="true"><i style="width:'+p+'%"></i></span>'+p+'% del plan</span></button></li>';
   }).join('')+'</ul>'+
   (S.clients.length?'':'<p class="empty">Todavía no agregaste alumnos.</p>')+
   '<button type="button" class="btn ghost wide" data-act="add-client">Agregar alumno</button>';
@@ -2271,7 +2272,7 @@ function render(scrollTop){
   if(!tabs.some(function(t){return t[0]===UI.tab;}))UI.tab=tabs[0][0];
   var tb=$('#tabs');
   tb.style.gridTemplateColumns='repeat('+tabs.length+',1fr)';tb.className='tabs-in'+(tabs.length>8?' many':'');
-  tb.innerHTML=tabs.map(function(t){return '<button type="button" class="tab" data-act="tab" data-v="'+t[0]+'"'+(t[0]===UI.tab?' aria-current="page"':'')+'>'+icon(ICON_FOR[t[0]])+'<span>'+t[1]+'</span></button>';}).join('');
+  tb.innerHTML=tabs.map(function(t){return '<button type="button" class="tab" data-act="tab" data-v="'+t[0]+'"'+(t[0]===UI.tab?' aria-current="page"':'')+'>'+icon(ICON_FOR[t[0]])+'<span>'+t[1]+(t[0]==='alumnos'&&UI.role==='trainer'&&S.clients.some(function(x){return x.needsPlan;})?'<i class="dot-new" style="width:7px;height:7px;margin:0 0 0 3px;box-shadow:none"></i>':'')+'</span></button>';}).join('');
   var fn={plan:UI.role==='alumno'?scrTrain:scrEdit,vista:scrVista,prog:scrProg,nutri:scrNutri,progs:scrProgs,alumnos:scrClients,ficha:scrFicha,test:scrTest,ejer:scrEjer}[UI.tab];
   $('#main').innerHTML=(UI.tab==='alumnos')?scrClients():(UI.tab==='test')?scrTest():(UI.tab==='ejer')?scrEjer():(c?fn(c):'<p class="empty">Agregá un alumno para empezar.</p>');
   var wb=document.getElementById('whoBar');
@@ -2337,12 +2338,12 @@ document.addEventListener('click',function(ev){
     (c.plan[UI.day]||[]).forEach(function(b){b.exercises=(b.exercises||[]).filter(function(e){return e.id!==id;});});
     save();render();
   }
-  else if(a==='publish'){toast('Plan enviado a '+c.first);}
+  else if(a==='publish'){c.needsPlan=false;save();toast('Plan enviado a '+c.first);render();}
   else if(a==='archive-plan'){
     if(!confirm('Se va a guardar en "Planes anteriores" la progresión, las observaciones, y el detalle de carga máxima y mínima de cada ejercicio por cantidad de repeticiones (semana, sesión, ronda y RIR). Después se borran los kilos y observaciones cargados para poder empezar un plan nuevo; la estructura de ejercicios (reps/RIR/rondas) queda igual, la podés editar. ¿Continuar?'))return;
     var inf=buildInforme(c);
     c.archivo=c.archivo||[];c.archivo.push(inf);
-    c.loads={};c.notes={};c.coachNote='';c.sessNote=[];
+    c.loads={};c.notes={};c.coachNote='';c.sessNote=[];c.needsPlan=true;
     save();toast('Plan archivado. Ya podés armar el plan nuevo.');render();
   }
   else if(a==='toggle-prog'){
