@@ -1300,8 +1300,8 @@ function repBreakdownHtml(rb,dayN){
     }).join('')+'</tbody></table></div>';
 }
 /* ---------- gráfico ---------- */
-function lineChart(labels,vals,unit,desc){
-  var W=340,H=190,pl=38,pr=14,pt=22,pb=26;
+function lineChart(labels,vals,unit,desc,wide){
+  var W=wide?Math.max(340,38+14+vals.length*50):340,H=190,pl=38,pr=14,pt=22,pb=26;
   var pts=[];
   vals.forEach(function(v,i){if(v!=null)pts.push({i:i,v:v});});
   if(!pts.length)return '<p class="empty">Todavía no hay datos para mostrar.</p>';
@@ -1312,7 +1312,7 @@ function lineChart(labels,vals,unit,desc){
   var n=vals.length;
   var x=function(i){return pl+(n===1?0:i*(W-pl-pr)/(n-1));};
   var y=function(v){return pt+(mx-v)*(H-pt-pb)/(mx-mn);};
-  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(desc)+'">';
+  var s='<svg viewBox="0 0 '+W+' '+H+'" style="min-width:'+(W>340?W+'px':'0')+'" role="img" aria-label="'+esc(desc)+'">';
   for(var g=0;g<3;g++){
     var gv=mn+(mx-mn)*g/2,gy=y(gv);
     s+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+gy+'" y2="'+gy+'" style="stroke:var(--line)" stroke-width="1"/>';
@@ -1752,13 +1752,23 @@ function scrProg(c){
   var opts=nameList.map(function(n){return '<option value="'+esc(n)+'"'+(n===curName?' selected':'')+'>'+esc(n)+'</option>';}).join('');
 
   var pts=[],labels=[];
+  /* un punto por cada plan archivado (su carga máxima) + un punto por cada semana del plan actual */
   archivo.forEach(function(inf){
-    var dt=(inf.detalle||[]).filter(function(x){return x.nombre===curName;})[0];
-    pts.push(dt&&dt.overallMax?dt.overallMax.kg:null);
-    labels.push(new Date(inf.fecha).toLocaleDateString('es-AR',{month:'short',year:'2-digit'}));
+    var mxA=null;
+    (inf.detalle||[]).forEach(function(x){if(x.nombre===curName&&x.overallMax&&(mxA==null||x.overallMax.kg>mxA))mxA=x.overallMax.kg;});
+    if(mxA==null)return;
+    pts.push(mxA);
+    labels.push(new Date(inf.fecha).toLocaleDateString('es-AR',{day:'numeric',month:'short'}));
   });
-  var liveMax=item?extremes(c,item).mx:null;
-  pts.push(liveMax?liveMax.kg:null);labels.push('Actual');
+  var itemsCur=list.filter(function(x){return x.ex.name===curName;});
+  for(var wk=1;wk<=weeksOf(c);wk++){
+    var wmx=null;
+    itemsCur.forEach(function(it){
+      var arr=c.loads[key(wk,it.d,it.ex.id)]||[];
+      for(var r=0;r<it.ex.rounds;r++){var nv=num(arr[r]);if(nv!=null&&(wmx==null||nv>wmx))wmx=nv;}
+    });
+    if(wmx!=null){pts.push(wmx);labels.push('Sem '+wk);}
+  }
   var first=null,last=null;
   for(var i=0;i<pts.length;i++){if(pts[i]!=null){if(first==null)first=pts[i];last=pts[i];}}
   var delta=(first!=null&&last!=null)?'<p class="delta">Carga máxima — variación total: <strong>'+(last-first>=0?'+':'')+fmtN(last-first)+' kg</strong> ('+(first?(last-first>=0?'+':'')+Math.round((last-first)/first*100):0)+'%).</p>':'';
@@ -1777,7 +1787,7 @@ function scrProg(c){
 
   return head+
     '<label class="fld" style="margin-top:14px">Ejercicio<select class="sel" data-sel="exname" style="margin-top:4px">'+opts+'</select></label>'+
-    '<div class="chart">'+lineChart(labels,pts,'kg','Carga máxima de '+esc(curName)+' por plan, en kilos')+'</div>'+delta+
+    '<div class="chart"><div class="scroll" style="margin:0">'+lineChart(labels,pts,'kg','Carga máxima de '+esc(curName)+' a lo largo del tiempo, en kilos',true)+'</div></div><p class="legend" style="margin-top:6px">Cada punto es la carga máxima: una por plan archivado y una por semana del plan actual.</p>'+delta+
     liveSection+histSection;
 }
 
@@ -2269,6 +2279,7 @@ function render(scrollTop){
   var wb=document.getElementById('whoBar');
   if(wb)wb.innerHTML='<span class="who-bar tag">'+(UI.role==='trainer'?'Panel del entrenador':esc(c?c.first:''))+'</span><button type="button" class="btn ghost small" data-act="logout">Salir</button>';
   if(UI.tab==='test')loadTestFrame();
+  var cs=document.querySelector('.chart .scroll');if(cs)cs.scrollLeft=cs.scrollWidth;
   if(scrollTop)window.scrollTo(0,0);
 }
 
