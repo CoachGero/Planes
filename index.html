@@ -1301,7 +1301,7 @@ function repBreakdownHtml(rb,dayN){
 }
 /* ---------- gráfico ---------- */
 function lineChart(labels,vals,unit,desc,wide){
-  var W=wide?Math.max(340,38+14+vals.length*50):340,H=190,pl=38,pr=14,pt=22,pb=26;
+  var W=wide?Math.max(340,38+14+vals.length*50):340,H=190,pl=38,pr=(wide?26:14),pt=22,pb=26;
   var pts=[];
   vals.forEach(function(v,i){if(v!=null)pts.push({i:i,v:v});});
   if(!pts.length)return '<p class="empty">Todavía no hay datos para mostrar.</p>';
@@ -1752,23 +1752,21 @@ function scrProg(c){
   var opts=nameList.map(function(n){return '<option value="'+esc(n)+'"'+(n===curName?' selected':'')+'>'+esc(n)+'</option>';}).join('');
 
   var pts=[],labels=[];
-  /* un punto por cada plan archivado (su carga máxima) + un punto por cada semana del plan actual */
+  /* un punto por mes: la carga máxima de ese mes (planes archivados agrupados por mes + el plan actual en el mes de hoy) */
+  var byM={},mOrder=[];
   archivo.forEach(function(inf){
     var mxA=null;
     (inf.detalle||[]).forEach(function(x){if(x.nombre===curName&&x.overallMax&&(mxA==null||x.overallMax.kg>mxA))mxA=x.overallMax.kg;});
     if(mxA==null)return;
-    pts.push(mxA);
-    labels.push(new Date(inf.fecha).toLocaleDateString('es-AR',{day:'numeric',month:'short'}));
+    var dt=new Date(inf.fecha),mk=dt.getFullYear()*100+dt.getMonth();
+    if(byM[mk]==null){byM[mk]=mxA;mOrder.push([mk,dt]);}else if(mxA>byM[mk])byM[mk]=mxA;
   });
-  var itemsCur=list.filter(function(x){return x.ex.name===curName;});
-  for(var wk=1;wk<=weeksOf(c);wk++){
-    var wmx=null;
-    itemsCur.forEach(function(it){
-      var arr=c.loads[key(wk,it.d,it.ex.id)]||[];
-      for(var r=0;r<it.ex.rounds;r++){var nv=num(arr[r]);if(nv!=null&&(wmx==null||nv>wmx))wmx=nv;}
-    });
-    if(wmx!=null){pts.push(wmx);labels.push('Sem '+wk);}
-  }
+  mOrder.sort(function(a,b){return a[0]-b[0];});
+  var mLbl=function(dt){return dt.toLocaleDateString('es-AR',{month:'short',year:'2-digit'}).replace('.','');};
+  mOrder.forEach(function(m){pts.push(byM[m[0]]);labels.push(mLbl(m[1]));});
+  var curMx=null;
+  list.filter(function(x){return x.ex.name===curName;}).forEach(function(it){var e=extremes(c,it).mx;if(e&&(curMx==null||e.kg>curMx))curMx=e.kg;});
+  if(curMx!=null){var nowD=new Date(),lb=mLbl(nowD);pts.push(curMx);labels.push(labels.indexOf(lb)>=0?lb+' (act.)':lb);}
   var first=null,last=null;
   for(var i=0;i<pts.length;i++){if(pts[i]!=null){if(first==null)first=pts[i];last=pts[i];}}
   var delta=(first!=null&&last!=null)?'<p class="delta">Carga máxima — variación total: <strong>'+(last-first>=0?'+':'')+fmtN(last-first)+' kg</strong> ('+(first?(last-first>=0?'+':'')+Math.round((last-first)/first*100):0)+'%).</p>':'';
@@ -1787,7 +1785,7 @@ function scrProg(c){
 
   return head+
     '<label class="fld" style="margin-top:14px">Ejercicio<select class="sel" data-sel="exname" style="margin-top:4px">'+opts+'</select></label>'+
-    '<div class="chart"><div class="scroll" style="margin:0">'+lineChart(labels,pts,'kg','Carga máxima de '+esc(curName)+' a lo largo del tiempo, en kilos',true)+'</div></div><p class="legend" style="margin-top:6px">Cada punto es la carga máxima: una por plan archivado y una por semana del plan actual.</p>'+delta+
+    '<div class="chart"><div class="scroll" style="margin:0">'+lineChart(labels,pts,'kg','Carga máxima de '+esc(curName)+' por mes, en kilos',true)+'</div></div><p class="legend" style="margin-top:6px">Cada punto es la carga máxima (kg) de un mes. El plan actual cuenta en el mes de hoy; los planes archivados, en el mes en que los archivaste.</p>'+delta+
     liveSection+histSection;
 }
 
